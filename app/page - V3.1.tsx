@@ -614,27 +614,6 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
-              {[
-                { label: 'Todos', value: 'TODOS' },
-                { label: '⚠️ Sin Existencias', value: 'SIN_EXISTENCIAS' },
-                { label: '✨ Nuevos', value: 'NUEVO' },
-                { label: '🚨 Urgentes', value: 'URGENTE' },
-                { label: '🔥 Alta Demanda', value: 'ALTA_DEMANDA' },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setFiltroMotivo(tab.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroMotivo === tab.value ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
               {[
                 { label: 'Todos', value: 'TODOS' },
