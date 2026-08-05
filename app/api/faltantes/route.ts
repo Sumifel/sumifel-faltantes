@@ -12,6 +12,23 @@ const USUARIOS_OBLIGATORIOS = [
   { nombre: 'Mostrador', rol: 'EMPLEADO' },
 ];
 
+// Diccionario seguro para mapear cualquier variante del frontend al enum de Prisma
+const MAPA_MOTIVOS: Record<string, string> = {
+  'SIN_EXISTENCIAS': 'SIN_EXISTENCIAS',
+  'Sin_Existencias': 'SIN_EXISTENCIAS',
+  'Sin_ExistenciaS': 'SIN_EXISTENCIAS',
+  'sin_existencias': 'SIN_EXISTENCIAS',
+  'ALTA_DEMANDA': 'ALTA_DEMANDA',
+  'Alta_Demanda': 'ALTA_DEMANDA',
+  'alta_demanda': 'ALTA_DEMANDA',
+  'URGENTE': 'URGENTE',
+  'Urgente': 'URGENTE',
+  'urgente': 'URGENTE',
+  'NUEVO': 'NUEVO',
+  'Nuevo': 'NUEVO',
+  'nuevo': 'NUEVO'
+};
+
 export async function GET() {
   try {
     for (const u of USUARIOS_OBLIGATORIOS) {
@@ -79,6 +96,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre o descripción del producto es obligatorio.' }, { status: 400 });
     }
 
+    // Mapeo seguro del motivo recibido del frontend
+    const motivoCrudo = motivo || 'ALTA_DEMANDA';
+    const motivoMapeado = MAPA_MOTIVOS[motivoCrudo] || 'SIN_EXISTENCIAS';
+
     const dataToCreate: any = {
       producto: String(finalProducto),
       codigoSae: codigoSae || null,
@@ -86,7 +107,7 @@ export async function POST(request: Request) {
       marca: marca || null,
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
       cantidadSugerida: finalCantidadSugerida,
-      motivo: motivo || 'ALTA_DEMANDA',
+      motivo: motivoMapeado as any, // <--- Aplicamos el valor mapeado para que coincida con el Enum
     };
 
     if (diferenciaSae !== undefined) {
