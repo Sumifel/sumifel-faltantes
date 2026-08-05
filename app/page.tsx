@@ -9,7 +9,7 @@ interface Usuario {
 }
 
 type EstatusFaltante = 'PENDIENTE' | 'EN_TRANSITO' | 'RECIBIDO';
-type MotivoFaltante = 'NUEVO' |'Sin_ExistenciaS'| 'URGENTE' | 'ALTA_DEMANDA';
+type MotivoFaltante = 'NUEVO' |'Sin_Existencias'| 'URGENTE' | 'ALTA_DEMANDA';
 
 interface Faltante {
   id: number;
