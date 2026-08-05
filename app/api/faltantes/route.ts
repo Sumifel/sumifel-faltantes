@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const USUARIOS_OBLIGATORIOS = [
+  { nombre: 'Mostrador', rol: 'EMPLEADO' },
   { nombre: 'Gerente', rol: 'GERENCIA' },
   { nombre: 'Administrador', rol: 'ADMIN' },
   { nombre: 'Ventas 02', rol: 'VENTAS' },
@@ -9,7 +10,7 @@ const USUARIOS_OBLIGATORIOS = [
   { nombre: 'Ventas 12', rol: 'VENTAS' },
   { nombre: 'Ventas 16', rol: 'VENTAS' },
   { nombre: 'Almacen', rol: 'ALMACEN' },
-  { nombre: 'Mostrador', rol: 'EMPLEADO' },
+  
 ];
 
 export async function GET() {
@@ -66,9 +67,11 @@ export async function POST(request: Request) {
       motivo,
       alertaSaes,
       reportadoPorId,
+      usuarioId,
     } = body;
 
     const finalCantidadSugerida = Number(cantidadSugerida ?? cantidad) || 1;
+    const finalReportadoPorId = Number(reportadoPorId ?? usuarioId);
 
     const dataToCreate: any = {
       codigoSae: codigoSae || null,
@@ -81,15 +84,15 @@ export async function POST(request: Request) {
     };
 
     if (descripcion !== undefined) dataToCreate.descripcion = descripcion;
-    if (nombre !== undefined) dataToCreate.nombre = nombre;
-    if (producto !== undefined) dataToCreate.producto = producto;
+    else if (nombre !== undefined) dataToCreate.descripcion = nombre;
+    else if (producto !== undefined) dataToCreate.descripcion = producto;
 
-    if (reportadoPorId) {
+    if (finalReportadoPorId && !isNaN(finalReportadoPorId)) {
       dataToCreate.reportadoPor = {
-        connect: { id: Number(reportadoPorId) }
+        connect: { id: finalReportadoPorId }
       };
     } else {
-      return NextResponse.json({ error: 'El campo reportadoPorId es obligatorio.' }, { status: 400 });
+      return NextResponse.json({ error: 'El usuario que reporta es obligatorio.' }, { status: 400 });
     }
 
     const nuevoFaltante = await prisma.faltante.create({
