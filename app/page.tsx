@@ -39,6 +39,7 @@ export default function Home() {
 
   // Filtros y estados visuales
   const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
+  const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -123,10 +124,11 @@ export default function Home() {
     }
   };
 
-  // Filtrado de elementos según los botones seleccionados
+  // Filtrado combinado por estatus y por motivo
   const faltantesFiltrados = faltantes.filter((item) => {
-    if (filtroEstatus === 'TODOS') return true;
-    return item.estatus === filtroEstatus;
+    const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
+    const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
+    return pasaEstatus && pasaMotivo;
   });
 
   return (
@@ -277,31 +279,57 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Barra de Filtros por Estatus */}
-          <div className="flex flex-wrap gap-2 mb-6 print:hidden">
-            <span className="text-sm font-medium text-gray-600 self-center mr-2">Filtrar por estatus:</span>
-            {[
-              { label: 'Todos', value: 'TODOS' },
-              { label: '🔴 Pendientes', value: 'PENDIENTE' },
-              { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
-              { label: '🟢 Recibidos', value: 'RECIBIDO' },
-            ].map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setFiltroEstatus(tab.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  filtroEstatus === tab.value
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Barras de Filtros (Estatus y Motivo) */}
+          <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
+            {/* Filtro por Estatus */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-gray-700 uppercase w-20">Estatus:</span>
+              {[
+                { label: 'Todos', value: 'TODOS' },
+                { label: '🔴 Pendientes', value: 'PENDIENTE' },
+                { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
+                { label: '🟢 Recibidos', value: 'RECIBIDO' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setFiltroEstatus(tab.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    filtroEstatus === tab.value
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro por Motivo */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-gray-700 uppercase w-20">Motivo:</span>
+              {[
+                { label: 'Todos', value: 'TODOS' },
+                { label: '✨ Nuevos', value: 'NUEVO' },
+                { label: '🚨 Urgentes', value: 'URGENTE' },
+                { label: '🔥 Alta Demanda', value: 'ALTA_DEMANDA' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setFiltroMotivo(tab.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    filtroMotivo === tab.value
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
           
           {faltantesFiltrados.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados con este filtro.</p>
+            <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados con los filtros seleccionados.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
