@@ -7,43 +7,40 @@ export async function PATCH(
 ) {
   try {
     const resolvedParams = await Promise.resolve(context.params);
-    const id = resolvedParams.id;
+    const id = parseInt(resolvedParams.id);
     const body = await request.json();
-    
-    const { 
-      descripcion, 
-      codigoSae, 
-      codigoProveedor, 
-      marca, 
-      proveedorSugerido, 
-      cantidad, 
-      motivo, 
-      alertaSaes, 
-      estatus, 
-      notas 
-    } = body;
+    const { estatus, usuarioId, pin } = body;
 
-    // Objeto dinámico con tipado 'any' para evitar errores de TypeScript en el build
-    const dataToUpdate: any = {};
-    if (descripcion !== undefined) dataToUpdate.descripcion = descripcion;
-    if (codigoSae !== undefined) dataToUpdate.codigoSae = codigoSae;
-    if (codigoProveedor !== undefined) dataToUpdate.codigoProveedor = codigoProveedor;
-    if (marca !== undefined) dataToUpdate.marca = marca;
-    if (proveedorSugerido !== undefined) dataToUpdate.proveedorSugerido = proveedorSugerido ? String(proveedorSugerido) : null;
-    if (cantidad !== undefined) dataToUpdate.cantidad = Number(cantidad);
-    if (motivo !== undefined) dataToUpdate.motivo = motivo;
-    if (alertaSaes !== undefined) dataToUpdate.alertaSaes = Boolean(alertaSaes);
-    if (estatus !== undefined) dataToUpdate.estatus = estatus;
-    if (notas !== undefined) dataToUpdate.notas = notas;
+    if (!usuarioId) {
+      return NextResponse.json({ error: 'Debe identificar qué usuario está realizando la acción.' }, { status: 400 });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: parseInt(usuarioId) },
+    });
+
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado.' }, { status: 404 });
+    }
+
+    // Validar si es Gerencia o Admin
+    if (usuario.rol !== 'ADMIN' && usuario.rol !== 'GERENCIA') {
+      return NextResponse.json({ error: 'Acceso denegado: Solo el Gerente o Administrador pueden cambiar el estatus.' }, { status: 403 });
+    }
+
+    // Validar el PIN si el usuario tiene uno configurado
+    if (usuario.pin && usuario.pin !== pin) {
+      return NextResponse.json({ error: 'PIN de seguridad incorrecto.' }, { status: 401 });
+    }
 
     const faltanteActualizado = await prisma.faltante.update({
-      where: { id: Number(id) },
-      data: dataToUpdate,
+      where: { id },
+      data: { estatus },
     });
 
     return NextResponse.json(faltanteActualizado);
   } catch (error) {
-    console.error('Error al actualizar faltante:', error);
-    return NextResponse.json({ error: 'Error al actualizar faltante' }, { status: 500 });
+    console.error('Error al actualizar estatus:', error);
+    return NextResponse.json({ error: 'Error al actualizar el estatus.' }, { status: 500 });
   }
 }
