@@ -1,31 +1,10 @@
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-}
-
-model Usuario {
-  id        Int       @id @default(autoincrement())
-  nombre    String
-  rol       Rol       @default(MOSTRADOR)
-  faltantes Faltante[]
-}
-
-model Faltante {
-  id                 Int      @id @default(autoincrement())
-  producto           String
-  codigoSae          String?
-  codigoProv         String?
-  cantidadSugerida   Float
-  motivo             Motivo   @default(ALTA_DEMANDA)
-  diferenciaSae      Boolean  @default(false)
-  estatus            Estatus  @default(PENDIENTE)
-  reportadoPorId     Int
-  reportadoPor       Usuario  @relation(fields: [reportadoPorId], references: [id])
-  fechaReporte       DateTime @default(now())
-  fechaActualizacion DateTime @updatedAt
 }
 
 enum Motivo {
@@ -34,19 +13,31 @@ enum Motivo {
   ALTA_DEMANDA
 }
 
-enum Rol {
-  Ventas10
-  Ventas02
-  Ventas12
-  Ventas16
-  MOSTRADOR
-  COMPRAS
-  ALMACEN
-  GERENCIA
-}
-
 enum Estatus {
   PENDIENTE
   EN_PEDIDO
   RECIBIDO
+}
+
+model Usuario {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  rol       String     @default("EMPLEADO")
+  faltantes Faltante[]
+}
+
+model Faltante {
+  id                Int      @id @default(autoincrement())
+  producto          String
+  codigoSae         String?
+  codigoProv        String?
+  marca             String?
+  proveedorSugerido String?
+  cantidadSugerida  Float
+  motivo            Motivo   @default(ALTA_DEMANDA)
+  diferenciaSae     Boolean  @default(false)
+  estatus           Estatus  @default(PENDIENTE)
+  fechaReporte      DateTime @default(now())
+  reportadoPorId    Int
+  reportadoPor      Usuario  @relation(fields: [reportadoPorId], references: [id])
 }

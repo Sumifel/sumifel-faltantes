@@ -8,29 +8,31 @@ export async function GET() {
       include: { reportadoPor: true },
     })
 
-    // Definimos las columnas que tendrá el archivo de Excel
-    let csv = 'ID,Fecha de Captura,Producto,Codigo SAE,Codigo Proveedor,Cantidad Sugerida,Motivo,Diferencia SAE,Estatus\n'
+    const headers = ['ID', 'Fecha', 'Producto', 'Marca', 'Codigo SAE', 'Codigo Prov', 'Proveedor Sugerido', 'Cantidad', 'Motivo', 'Reportado Por', 'Estatus', 'Diferencia SAE']
+    const rows = faltantes.map(f => [
+      f.id,
+      new Date(f.fechaReporte).toLocaleString(),
+      `"${f.producto}"`,
+      `"${f.marca || ''}"`,
+      `"${f.codigoSae || ''}"`,
+      `"${f.codigoProv || ''}"`,
+      `"${f.proveedorSugerido || ''}"`,
+      f.cantidadSugerida,
+      f.motivo,
+      `"${f.reportadoPor?.nombre || ''}"`,
+      f.estatus,
+      f.diferenciaSae ? 'SI' : 'NO'
+    ])
 
-    faltantes.forEach((f) => {
-      const producto = `"${f.producto.replace(/"/g, '""')}"`
-      const codigoSae = `"${f.codigoSae || ''}"`
-      const codigoProv = `"${f.codigoProv || ''}"`
-      const motivo = f.motivo
-      const diferencia = f.diferenciaSae ? 'SÍ' : 'NO'
-      const fecha = new Date(f.fechaReporte).toLocaleString()
-      
-      csv += `${f.id},"${fecha}",${producto},${codigoSae},${codigoProv},${f.cantidadSugerida},${motivo},${diferencia},${f.estatus}\n`
-    })
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
 
-    return new NextResponse(csv, {
-      status: 200,
+    return new NextResponse(csvContent, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="reporte_faltantes.csv"',
+        'Content-Disposition': 'attachment; filename="faltantes_sumifel.csv"',
       },
     })
   } catch (error) {
-    console.error('Error al exportar CSV:', error)
-    return NextResponse.json({ error: 'Error al exportar el archivo.' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al exportar' }, { status: 500 })
   }
 }

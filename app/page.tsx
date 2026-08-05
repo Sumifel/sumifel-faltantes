@@ -13,6 +13,8 @@ interface Faltante {
   producto: string;
   codigoSae?: string;
   codigoProv?: string;
+  marca?: string;
+  proveedorSugerido?: string;
   cantidadSugerida: number;
   motivo: 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA';
   diferenciaSae: boolean;
@@ -32,6 +34,8 @@ export default function Home() {
   const [producto, setProducto] = useState('');
   const [codigoSae, setCodigoSae] = useState('');
   const [codigoProv, setCodigoProv] = useState('');
+  const [marca, setMarca] = useState('');
+  const [proveedorSugerido, setProveedorSugerido] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState<'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA'>('ALTA_DEMANDA');
   const [diferenciaSae, setDiferenciaSae] = useState(false);
@@ -78,6 +82,8 @@ export default function Home() {
           producto,
           codigoSae,
           codigoProv,
+          marca,
+          proveedorSugerido,
           cantidadSugerida: parseFloat(cantidad),
           motivo,
           diferenciaSae,
@@ -89,6 +95,8 @@ export default function Home() {
         setProducto('');
         setCodigoSae('');
         setCodigoProv('');
+        setMarca('');
+        setProveedorSugerido('');
         setCantidad('');
         setMotivo('ALTA_DEMANDA');
         setDiferenciaSae(false);
@@ -126,7 +134,7 @@ export default function Home() {
     }
   };
 
-  // Filtrado completo (estatus, motivo, alerta sae, usuario)
+  // Filtrado completo
   const faltantesFiltrados = faltantes.filter((item) => {
     const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
     const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
@@ -143,14 +151,14 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Cabecera */}
         <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 print:bg-none print:text-black print:p-2">
           <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
           <p className="text-blue-100 text-sm mt-1 print:hidden">Gestión avanzada de inventario y abastecimiento</p>
         </div>
 
-        {/* Formulario (Oculto al imprimir PDF) */}
+        {/* Formulario */}
         <div className="bg-white p-6 rounded-xl shadow-md mb-8 print:hidden">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Reportar Nuevo Faltante</h2>
           
@@ -192,7 +200,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Código en SAE 10</label>
                 <input
@@ -205,7 +213,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código de Proveedor (Texto Libre)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Código de Proveedor (Libre)</label>
                 <input
                   type="text"
                   value={codigoProv}
@@ -215,6 +223,30 @@ export default function Home() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                <input
+                  type="text"
+                  value={marca}
+                  onChange={(e) => setMarca(e.target.value)}
+                  placeholder="Ej. Kobrex, Siemens..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
+                <input
+                  type="text"
+                  value={proveedorSugerido}
+                  onChange={(e) => setProveedorSugerido(e.target.value)}
+                  placeholder="Ej. Distribuidor Electrico SA"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
                 <input
@@ -227,9 +259,7 @@ export default function Home() {
                   required
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
                 <select
@@ -252,7 +282,7 @@ export default function Home() {
                   className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="diferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
-                  ⚠️ ¿Diferencia de inventario? (No hay físicamente, pero SAE 10 dice que sí)
+                  ⚠️ ¿Diferencia de inventario? (SAE dice que sí hay)
                 </label>
               </div>
             </div>
@@ -272,7 +302,6 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
             <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
             
-            {/* Botones de Exportación / Impresión */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => window.print()}
@@ -291,7 +320,6 @@ export default function Home() {
 
           {/* Panel de Filtros Avanzados */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
-            {/* Filtro por Estatus */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
               {[
@@ -304,9 +332,7 @@ export default function Home() {
                   key={tab.value}
                   onClick={() => setFiltroEstatus(tab.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroEstatus === tab.value
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    filtroEstatus === tab.value ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   {tab.label}
@@ -314,7 +340,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Filtro por Motivo */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
               {[
@@ -327,9 +352,7 @@ export default function Home() {
                   key={tab.value}
                   onClick={() => setFiltroMotivo(tab.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroMotivo === tab.value
-                      ? 'bg-purple-600 text-white shadow'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    filtroMotivo === tab.value ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   {tab.label}
@@ -337,7 +360,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Filtro por Alerta SAE */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
               {[
@@ -349,9 +371,7 @@ export default function Home() {
                   key={tab.value}
                   onClick={() => setFiltroAlerta(tab.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroAlerta === tab.value
-                      ? 'bg-yellow-600 text-white shadow'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    filtroAlerta === tab.value ? 'bg-yellow-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   {tab.label}
@@ -359,15 +379,12 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Filtro por Usuario (Reportado por) */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
               <button
                 onClick={() => setFiltroUsuario('TODOS')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  filtroUsuario === 'TODOS'
-                    ? 'bg-gray-800 text-white shadow'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  filtroUsuario === 'TODOS' ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
               >
                 Todos
@@ -377,9 +394,7 @@ export default function Home() {
                   key={u.id}
                   onClick={() => setFiltroUsuario(u.id.toString())}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroUsuario === u.id.toString()
-                      ? 'bg-gray-800 text-white shadow'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    filtroUsuario === u.id.toString() ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   {u.nombre}
@@ -396,8 +411,8 @@ export default function Home() {
                 <thead>
                   <tr className="border-b bg-gray-100 text-gray-700 text-sm">
                     <th className="p-3">Fecha</th>
-                    <th className="p-3">Producto</th>
-                    <th className="p-3">Códigos (SAE / Prov.)</th>
+                    <th className="p-3">Producto / Marca</th>
+                    <th className="p-3">Códigos & Proveedor</th>
                     <th className="p-3">Cant.</th>
                     <th className="p-3">Motivo</th>
                     <th className="p-3">Capturado Por</th>
@@ -411,10 +426,14 @@ export default function Home() {
                       <td className="p-3 text-xs text-gray-500">
                         {new Date(item.fechaReporte).toLocaleString()}
                       </td>
-                      <td className="p-3 font-medium">{item.producto}</td>
+                      <td className="p-3">
+                        <div className="font-medium">{item.producto}</div>
+                        {item.marca && <div className="text-xs text-blue-600 font-semibold">Marca: {item.marca}</div>}
+                      </td>
                       <td className="p-3 text-xs text-gray-600">
                         <div>SAE: <span className="font-semibold">{item.codigoSae || 'N/A'}</span></div>
                         <div>Prov: <span className="font-semibold">{item.codigoProv || 'N/A'}</span></div>
+                        {item.proveedorSugerido && <div className="text-purple-700 font-semibold mt-0.5">Sug: {item.proveedorSugerido}</div>}
                       </td>
                       <td className="p-3 font-bold">{item.cantidadSugerida}</td>
                       <td className="p-3">
@@ -429,7 +448,6 @@ export default function Home() {
                         {item.reportadoPor?.nombre || 'General'}
                       </td>
                       <td className="p-3">
-                        {/* Selector interactivo para cambiar estatus */}
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
