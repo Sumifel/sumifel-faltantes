@@ -8,7 +8,7 @@ interface Usuario {
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
+type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO' | 'DESCONTINUADO';
 type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA' | 'SIN_EXISTENCIAS';
 
 interface Faltante {
@@ -35,7 +35,6 @@ export default function Home() {
   
   const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
   
-  // Estados para el control de sesión segura por PIN
   const [pinGuardado, setPinGuardado] = useState<string>('');
   const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
 
@@ -49,10 +48,12 @@ export default function Home() {
   const [diferenciaSae, setDiferenciaSae] = useState(false);
   const [usuarioReportaId, setUsuarioReportaId] = useState('');
 
+  const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
   const [filtroAlerta, setFiltroAlerta] = useState<string>('TODOS');
   const [filtroUsuario, setFiltroUsuario] = useState<string>('TODOS');
+  
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -204,7 +205,24 @@ export default function Home() {
     }
   };
 
+  const limpiarFiltros = () => {
+    setBusquedaTexto('');
+    setFiltroEstatus('TODOS');
+    setFiltroMotivo('TODOS');
+    setFiltroAlerta('TODOS');
+    setFiltroUsuario('TODOS');
+  };
+
   const faltantesFiltrados = faltantes.filter((item) => {
+    const texto = busquedaTexto.toLowerCase().trim();
+    const pasaBusqueda = 
+      !texto || 
+      item.producto.toLowerCase().includes(texto) ||
+      (item.codigoSae && item.codigoSae.toLowerCase().includes(texto)) ||
+      (item.codigoProv && item.codigoProv.toLowerCase().includes(texto)) ||
+      (item.marca && item.marca.toLowerCase().includes(texto)) ||
+      (item.proveedorSugerido && item.proveedorSugerido.toLowerCase().includes(texto));
+
     const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
     const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
     const pasaAlerta = 
@@ -215,7 +233,7 @@ export default function Home() {
       filtroUsuario === 'TODOS' || 
       item.reportadoPor?.id.toString() === filtroUsuario;
 
-    return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
+    return pasaBusqueda && pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
   });
 
   const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
@@ -226,7 +244,7 @@ export default function Home() {
         <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
-            <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento</p>
+            <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento (SAE 10)</p>
           </div>
 
           <div className="bg-blue-700 p-3 rounded-lg border border-blue-500 w-full md:w-auto">
@@ -369,7 +387,7 @@ export default function Home() {
                   className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <label htmlFor="diferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
-                  ⚠️ ¿Diferencia de inventario? (SAE dice que sí hay)
+                  ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
                 </label>
               </div>
             </div>
@@ -385,7 +403,6 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
-          {/* ENCABEZADO EXCLUSIVO PARA IMPRESIÓN / PDF */}
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
@@ -393,10 +410,10 @@ export default function Home() {
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div><strong className="text-gray-800">Búsqueda libre:</strong> {busquedaTexto || 'Ninguna'}</div>
               <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
               <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
               <div><strong className="text-gray-800">Alerta SAE:</strong> {filtroAlerta}</div>
-              <div><strong className="text-gray-800">Reportado por:</strong> {filtroUsuario === 'TODOS' ? 'Todos los usuarios' : usuarios.find(u => u.id.toString() === filtroUsuario)?.nombre || filtroUsuario}</div>
             </div>
           </div>
 
@@ -422,7 +439,7 @@ export default function Home() {
                 🖨️ Generar Reporte PDF
               </button>
               <a
-                href="/api/faltantes/export"
+                href={`/api/faltantes/export?busqueda=${encodeURIComponent(busquedaTexto)}&estatus=${filtroEstatus}&motivo=${filtroMotivo}&alerta=${filtroAlerta}&usuarioId=${filtroUsuario}`}
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
               >
                 📥 Descargar Excel (CSV)
@@ -430,16 +447,39 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Filtros */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
-            {/* Estatus */}
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
+              <div className="w-full md:w-2/3">
+                <input
+                  type="text"
+                  value={busquedaTexto}
+                  onChange={(e) => setBusquedaTexto(e.target.value)}
+                  placeholder="🔍 Buscar por producto, código SAE, proveedor, marca..."
+                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3">
+                <span className="text-xs font-semibold text-gray-600">
+                  Mostrando <strong className="text-blue-600">{faltantesFiltrados.length}</strong> de {faltantes.length} registros
+                </span>
+                <button
+                  onClick={limpiarFiltros}
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition"
+                >
+                  🧹 Limpiar Filtros
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '🔴 Pendientes', value: 'PENDIENTE' },
                 { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
                 { label: '🟢 Recibidos', value: 'RECIBIDO' },
+                { label: '🟠 Descartados', value: 'DESCARTADO' },
+                { label: '❌ Descontinuados', value: 'DESCONTINUADO' },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -453,7 +493,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Motivo */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
               {[
@@ -475,7 +514,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Alerta SAE */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
               {[
@@ -495,7 +533,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Reportado por */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
               <button
@@ -576,17 +613,21 @@ export default function Home() {
                           } ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
-                            'bg-green-50 text-green-700 border-green-300'
+                            item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
+                            item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
+                            'bg-gray-100 text-gray-700 border-gray-300'
                           }`}
                         >
                           <option value="PENDIENTE">🔴 PENDIENTE</option>
                           <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
                           <option value="RECIBIDO">🟢 RECIBIDO</option>
+                          <option value="DESCARTADO">🟠 DESCARTADO</option>
+                          <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
                         </select>
                       </td>
                       <td className="p-3">
                         {item.diferenciaSae ? (
-                          <span className="text-yellow-600 font-bold text-xs" title="Diferencia con SAE">⚠️ Sí</span>
+                          <span className="text-yellow-600 font-bold text-xs" title="Diferencia con SAE 10">⚠️ Sí</span>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
@@ -601,7 +642,7 @@ export default function Home() {
       </div>
 
       <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
-        JALONEME LABS 2026
+        JALONEME LABS 2026 - SUMIFEL
       </footer>
     </main>
   );
