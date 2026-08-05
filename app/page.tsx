@@ -85,6 +85,30 @@ export default function Home() {
     }
   };
 
+  // Función para cambiar el estatus en segundo plano (PATCH)
+  const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
+    try {
+      const res = await fetch(`/api/faltantes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estatus: nuevoEstatus }),
+      });
+
+      if (res.ok) {
+        // Actualizamos el estado local para reflejar el cambio de inmediato
+        setFaltantes((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, estatus: nuevoEstatus as any } : item
+          )
+        );
+      } else {
+        alert('No se pudo cambiar el estatus.');
+      }
+    } catch (error) {
+      console.error('Error al cambiar estatus:', error);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
@@ -133,7 +157,7 @@ export default function Home() {
                   type="text"
                   value={codigoProv}
                   onChange={(e) => setCodigoProv(e.target.value)}
-                  placeholder="Ej. KOB-12 (Como viene en etiqueta)"
+                  placeholder="Ej. KOB-12"
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                 />
               </div>
@@ -213,7 +237,7 @@ export default function Home() {
                     <th className="p-3">Códigos (SAE / Prov.)</th>
                     <th className="p-3">Cant.</th>
                     <th className="p-3">Motivo</th>
-                    <th className="p-3">Estatus</th>
+                    <th className="p-3">Estatus (Control)</th>
                     <th className="p-3">Alerta SAE</th>
                   </tr>
                 </thead>
@@ -238,12 +262,20 @@ export default function Home() {
                         </span>
                       </td>
                       <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          item.estatus === 'PENDIENTE' ? 'bg-red-100 text-red-700' :
-                          item.estatus === 'EN_PEDIDO' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                          {item.estatus}
-                        </span>
+                        {/* Selector interactivo para cambiar estatus en tiempo real */}
+                        <select
+                          value={item.estatus}
+                          onChange={(e) => cambiarEstatus(item.id, e.target.value)}
+                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
+                            item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
+                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                            'bg-green-50 text-green-700 border-green-300'
+                          }`}
+                        >
+                          <option value="PENDIENTE">🔴 PENDIENTE</option>
+                          <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
+                          <option value="RECIBIDO">🟢 RECIBIDO</option>
+                        </select>
                       </td>
                       <td className="p-3">
                         {item.diferenciaSae ? (
