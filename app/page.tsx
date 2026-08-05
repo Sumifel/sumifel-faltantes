@@ -2,673 +2,301 @@
 
 import { useState, useEffect } from 'react';
 
+interface Faltante {
+  id: number;
+  fechaRegistro: string;
+  producto: string;
+  codigoSae: string | null;
+  codigoProv: string | null;
+  marca: string | null;
+  proveedorSugerido: string | null;
+  cantidadSugerida: number;
+  motivo: string;
+  diferenciaSae: string | null;
+  estatus: string;
+  reportadoPor: {
+    id: number;
+    nombre: string;
+    rol: string;
+  };
+}
+
 interface Usuario {
   id: number;
   nombre: string;
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO' | 'DESCONTINUADO';
-type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA' | 'SIN_EXISTENCIAS';
-
-interface Faltante {
-  id: number;
-  producto: string;
-  codigoSae?: string;
-  codigoProv?: string;
-  marca?: string;
-  proveedorSugerido?: string;
-  cantidadSugerida: number;
-  motivo: MotivoFaltante;
-  diferenciaSae: boolean;
-  estatus: EstatusFaltante;
-  fechaReporte: string;
-  reportadoPor: {
-    id: number;
-    nombre: string;
-  };
-}
-
-export default function Home() {
+export default function FaltantesPage() {
   const [faltantes, setFaltantes] = useState<Faltante[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  
-  const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
-  
-  const [pinGuardado, setPinGuardado] = useState<string>('');
-  const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
-  // Estados para el formulario de captura nueva
-  const [producto, setProducto] = useState('');
-  const [codigoSae, setCodigoSae] = useState('');
-  const [codigoProv, setCodigoProv] = useState('');
-  const [marca, setMarca] = useState('');
-  const [proveedorSugerido, setProveedorSugerido] = useState('');
-  const [cantidad, setCantidad] = useState('');
-  const [motivo, setMotivo] = useState<MotivoFaltante>('SIN_EXISTENCIAS');
-  const [diferenciaSae, setDiferenciaSae] = useState(false);
-  const [usuarioReportaId, setUsuarioReportaId] = useState('');
-
-  // 🛠️ Estados para la Edición (Versión 4.0)
-  const [editingItem, setEditingItem] = useState<Faltante | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // Estados de Filtros
-  const [busquedaTexto, setBusquedaTexto] = useState('');
-  const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
+  // Filtros
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
-  const [filtroAlerta, setFiltroAlerta] = useState<string>('TODOS');
-  const [filtroUsuario, setFiltroUsuario] = useState<string>('TODOS');
-  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
-  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
-  
-  const [cargando, setCargando] = useState(false);
-  const [mensaje, setMensaje] = useState('');
+  const [filtroDiferenciaSae, setFiltroDiferenciaSae] = useState<string>('TODOS');
+  const [busqueda, setBusqueda] = useState<string>('');
 
-  const cargarDatos = async () => {
-    try {
-      const res = await fetch('/api/faltantes');
-      const data = await res.json();
-      if (data.faltantes) setFaltantes(data.faltantes);
-      if (data.usuarios && data.usuarios.length > 0) {
-        setUsuarios(data.usuarios);
-        
-        if (!usuarioSesionId) {
-          const primerUsuario = data.usuarios[0];
-          setUsuarioSesionId(primerUsuario.id.toString());
-          
-          if (primerUsuario.rol === 'ADMIN' || primerUsuario.rol === 'GERENCIA') {
-            const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${primerUsuario.nombre} para habilitar la edición:`);
-            if (pin && pin.trim() !== '') {
-              setPinGuardado(pin);
-              setAutorizadoGerencia(true);
-            } else {
-              setPinGuardado('');
-              setAutorizadoGerencia(false);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar datos', error);
-    }
-  };
+  // Estado de Edición / Modal
+  const [editingItem, setEditingItem] = useState<Faltante | null>(null);
+  const [formValues, setFormValues] = useState({
+    producto: '',
+    codigoSae: '',
+    codigoProv: '',
+    marca: '',
+    proveedorSugerido: '',
+    cantidadSugerida: 0,
+    motivo: '',
+    diferenciaSae: '',
+    estatus: '',
+  });
+  const [usuarioId, setUsuarioId] = useState<string>('');
+  const [pin, setPin] = useState<string>('');
+  const [errorModal, setErrorModal] = useState<string>('');
+  const [successModal, setSuccessModal] = useState<string>('');
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
-  const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
-  const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
-  const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
-
-  const handleCambioUsuario = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nuevoId = e.target.value;
-    setUsuarioSesionId(nuevoId);
-    
-    const user = usuarios.find(u => u.id.toString() === nuevoId);
-    if (user && (user.rol === 'ADMIN' || user.rol === 'GERENCIA')) {
-      const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${user.nombre} para habilitar la edición:`);
-      if (pin !== null && pin.trim() !== '') {
-        setPinGuardado(pin);
-        setAutorizadoGerencia(true);
-      } else {
-        setPinGuardado('');
-        setAutorizadoGerencia(false);
-        alert('Acceso de gerencia no autorizado. Quedará en modo consulta.');
-      }
-    } else {
-      setPinGuardado('');
-      setAutorizadoGerencia(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!producto || !cantidad || !usuarioReportaId) {
-      alert('Por favor complete los campos obligatorios y seleccione quién reporta.');
-      return;
-    }
-
-    setCargando(true);
-    setMensaje('');
-
+  const cargarDatos = async () => {
     try {
-      const res = await fetch('/api/faltantes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          producto,
-          codigoSae,
-          codigoProv,
-          marca,
-          proveedorSugerido,
-          cantidadSugerida: parseFloat(cantidad),
-          motivo,
-          diferenciaSae,
-          usuarioId: parseInt(usuarioReportaId),
-        }),
-      });
+      setLoading(true);
+      const resFaltantes = await fetch('/api/faltantes');
+      const dataFaltantes = await resFaltantes.json();
+      if (Array.isArray(dataFaltantes)) {
+        setFaltantes(dataFaltantes);
+      } else if (dataFaltantes.faltantes) {
+        setFaltantes(dataFaltantes.faltantes);
+      }
 
-      if (res.ok) {
-        setProducto('');
-        setCodigoSae('');
-        setCodigoProv('');
-        setMarca('');
-        setProveedorSugerido('');
-        setCantidad('');
-        setMotivo('SIN_EXISTENCIAS');
-        setDiferenciaSae(false);
-        setMensaje('¡Faltante registrado con éxito!');
-        cargarDatos();
-      } else {
-        setMensaje('Error al registrar el faltante.');
+      const resUsuarios = await fetch('/api/usuarios');
+      const dataUsuarios = await resUsuarios.json();
+      if (Array.isArray(dataUsuarios)) {
+        setUsuarios(dataUsuarios);
       }
     } catch (error) {
-      console.error('Error de conexión al registrar:', error);
-      setMensaje('Error de conexión.');
+      console.error('Error al cargar datos:', error);
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
-  const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
-    if (!puedeModificar) {
-      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN.');
-      cargarDatos();
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/faltantes/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          estatus: nuevoEstatus,
-          usuarioId: parseInt(usuarioSesionId),
-          pin: pinGuardado
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setFaltantes((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, estatus: nuevoEstatus as EstatusFaltante } : item
-          )
-        );
-      } else {
-        if (res.status === 401) {
-          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
-          setAutorizadoGerencia(false);
-          setPinGuardado('');
-        } else {
-          alert(data.error || 'No se pudo cambiar el estatus.');
-        }
-        cargarDatos();
-      }
-    } catch (error) {
-      console.error('Error al cambiar estatus:', error);
-      cargarDatos();
-    }
-  };
-
-  // 🛠️ Funciones para abrir y guardar la edición completa (v4.0)
   const abrirModalEdicion = (item: Faltante) => {
-    if (!puedeModificar) {
-      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN para editar registros.');
-      return;
-    }
-    setEditingItem({ ...item });
-    setIsEditModalOpen(true);
+    setEditingItem(item);
+    setFormValues({
+      producto: item.producto || '',
+      codigoSae: item.codigoSae || '',
+      codigoProv: item.codigoProv || '',
+      marca: item.marca || '',
+      proveedorSugerido: item.proveedorSugerido || '',
+      cantidadSugerida: item.cantidadSugerida || 0,
+      motivo: item.motivo || '',
+      diferenciaSae: item.diferenciaSae || '',
+      estatus: item.estatus || 'PENDIENTE',
+    });
+    setUsuarioId('');
+    setPin('');
+    setErrorModal('');
+    setSuccessModal('');
   };
 
-  const guardarEdicionCompleta = async (e: React.FormEvent) => {
+  const guardarEdicion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem) return;
+    setErrorModal('');
+    setSuccessModal('');
+
+    if (!usuarioId) {
+      setErrorModal('Selecciona el usuario que autoriza.');
+      return;
+    }
+    if (!pin) {
+      setErrorModal('Ingresa el PIN de autorización.');
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/faltantes/${editingItem.id}`, {
+      const res = await fetch(`/api/faltantes/${editingItem?.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          producto: editingItem.producto,
-          codigoSae: editingItem.codigoSae,
-          codigoProv: editingItem.codigoProv,
-          marca: editingItem.marca,
-          proveedorSugerido: editingItem.proveedorSugerido,
-          cantidadSugerida: Number(editingItem.cantidadSugerida),
-          motivo: editingItem.motivo,
-          diferenciaSae: editingItem.diferenciaSae,
-          estatus: editingItem.estatus,
-          usuarioId: parseInt(usuarioSesionId),
-          pin: pinGuardado
+          ...formValues,
+          usuarioId: Number(usuarioId),
+          pin,
         }),
       });
 
       const data = await res.json();
 
-      if (res.ok) {
-        setFaltantes(prev => prev.map(item => item.id === editingItem.id ? editingItem : item));
-        setIsEditModalOpen(false);
-        setEditingItem(null);
-        alert('¡Registro actualizado correctamente con éxito!');
-        cargarDatos();
-      } else {
-        if (res.status === 401) {
-          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
-          setAutorizadoGerencia(false);
-          setPinGuardado('');
-        } else {
-          alert(data.error || 'No se pudo actualizar el registro.');
-        }
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al actualizar el registro');
       }
-    } catch (error) {
-      console.error('Error al actualizar registro:', error);
-      alert('Error de conexión al actualizar.');
+
+      setSuccessModal('¡Registro actualizado correctamente con éxito!');
+      setTimeout(() => {
+        setEditingItem(null);
+        cargarDatos();
+      }, 1200);
+    } catch (err: any) {
+      setErrorModal(err.message || 'Error al guardar cambios');
     }
   };
 
-  const limpiarFiltros = () => {
-    setBusquedaTexto('');
-    setFiltroEstatus('TODOS');
-    setFiltroMotivo('TODOS');
-    setFiltroAlerta('TODOS');
-    setFiltroUsuario('TODOS');
-    setFiltroFechaInicio('');
-    setFiltroFechaFin('');
-  };
+  // Dinámica de Filtros por Motivo y Diferencia SAE
+  const motivosDisponibles = ['TODOS', ...Array.from(new Set(faltantes.map((f) => f.motivo).filter(Boolean)))];
 
   const faltantesFiltrados = faltantes.filter((item) => {
-    const texto = busquedaTexto.toLowerCase().trim();
-    const pasaBusqueda = 
-      !texto || 
-      item.producto.toLowerCase().includes(texto) ||
-      (item.codigoSae && item.codigoSae.toLowerCase().includes(texto)) ||
-      (item.codigoProv && item.codigoProv.toLowerCase().includes(texto)) ||
-      (item.marca && item.marca.toLowerCase().includes(texto)) ||
-      (item.proveedorSugerido && item.proveedorSugerido.toLowerCase().includes(texto));
+    const cumpleMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
+    const cumpleDiferencia =
+      filtroDiferenciaSae === 'TODOS' ||
+      (filtroDiferenciaSae === 'CON_DIFERENCIA' && item.diferenciaSae && item.diferenciaSae.trim() !== '') ||
+      (filtroDiferenciaSae === 'SIN_DIFERENCIA' && (!item.diferenciaSae || item.diferenciaSae.trim() === ''));
 
-    const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
-    const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
-    const pasaAlerta = 
-      filtroAlerta === 'TODOS' || 
-      (filtroAlerta === 'SI' && item.diferenciaSae) || 
-      (filtroAlerta === 'NO' && !item.diferenciaSae);
-    const pasaUsuario = 
-      filtroUsuario === 'TODOS' || 
-      item.reportadoPor?.id.toString() === filtroUsuario;
+    const textoBusqueda = busqueda.toLowerCase();
+    const cumpleBusqueda =
+      !busqueda ||
+      item.producto.toLowerCase().includes(textoBusqueda) ||
+      (item.codigoSae && item.codigoSae.toLowerCase().includes(textoBusqueda)) ||
+      (item.marca && item.marca.toLowerCase().includes(textoBusqueda));
 
-    let pasaFecha = true;
-    if (item.fechaReporte) {
-      const fechaItemOnly = item.fechaReporte.split('T')[0];
-      if (filtroFechaInicio && fechaItemOnly < filtroFechaInicio) {
-        pasaFecha = false;
-      }
-      if (filtroFechaFin && fechaItemOnly > filtroFechaFin) {
-        pasaFecha = false;
-      }
-    }
-
-    return pasaBusqueda && pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario && pasaFecha;
+    return cumpleMotivo && cumpleDiferencia && cumpleBusqueda;
   });
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4 md:p-8 flex flex-col justify-between">
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes (v4.0)</h1>
-            <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento (SAE 10)</p>
+            <h1 className="text-3xl font-extrabold text-gray-900">SUMIFEL - Control de Faltantes</h1>
+            <p className="text-gray-600 mt-1">Gestión y seguimiento de productos faltantes en sucursal con SAE 10.</p>
           </div>
-
-          <div className="bg-blue-700 p-3 rounded-lg border border-blue-500 w-full md:w-auto">
-            <label className="block text-xs font-semibold text-blue-200 mb-1">👤 ¿Quién está usando el sistema ahora?</label>
-            <select
-              value={usuarioSesionId}
-              onChange={handleCambioUsuario}
-              className="w-full md:w-64 p-2 bg-white text-black font-semibold rounded text-sm focus:outline-none"
-            >
-              {usuarios.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre} ({u.rol}) {u.rol === 'ADMIN' || u.rol === 'GERENCIA' ? '🔑 [Gerencia]' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Sección de Captura (Abierta para todos) */}
-        <div className="bg-white p-6 rounded-xl shadow-md mb-8 print:hidden">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Reportar Nuevo Faltante</h2>
-          
-          {mensaje && (
-            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
-              {mensaje}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
-                <input
-                  type="text"
-                  value={producto}
-                  onChange={(e) => setProducto(e.target.value)}
-                  placeholder="Ej. Cable Kobrex calibre 12"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reportado por (Usuario) *</label>
-                <select
-                  value={usuarioReportaId}
-                  onChange={(e) => setUsuarioReportaId(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
-                  required
-                >
-                  <option value="">Seleccione quién captura...</option>
-                  {usuarios.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre} ({u.rol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código en SAE 10</label>
-                <input
-                  type="text"
-                  value={codigoSae}
-                  onChange={(e) => setCodigoSae(e.target.value)}
-                  placeholder="Ej. CABLE12"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código de Proveedor (Libre)</label>
-                <input
-                  type="text"
-                  value={codigoProv}
-                  onChange={(e) => setCodigoProv(e.target.value)}
-                  placeholder="Ej. KOB-12"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-                <input
-                  type="text"
-                  value={marca}
-                  onChange={(e) => setMarca(e.target.value)}
-                  placeholder="Ej. Kobrex, Siemens..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
-                <input
-                  type="text"
-                  value={proveedorSugerido}
-                  onChange={(e) => setProveedorSugerido(e.target.value)}
-                  placeholder="Ej. Distribuidor Electrico SA"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
-                  placeholder="Ej. 5"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
-                <select
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value as MotivoFaltante)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
-                >
-                  <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
-                  <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
-                  <option value="URGENTE">🚨 Pedido Urgente</option>
-                  <option value="NUEVO">✨ Producto Nuevo</option>
-                </select>
-              </div>
-
-              <div className="flex items-center space-x-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-6">
-                <input
-                  type="checkbox"
-                  id="diferencia"
-                  checked={diferenciaSae}
-                  onChange={(e) => setDiferenciaSae(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="diferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
-                  ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
-                </label>
-              </div>
-            </div>
-
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Buscar producto, código, marca..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 w-64 bg-white text-black"
+            />
             <button
-              type="submit"
-              disabled={cargando}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg transition duration-200 shadow-md"
+              onClick={cargarDatos}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow transition font-medium"
             >
-              {cargando ? 'Guardando...' : 'Registrar Faltante'}
+              Actualizar
             </button>
-          </form>
-        </div>
-
-        {/* Historial y Listado */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
-            <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
-            <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
-              <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
-              <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
-            </div>
           </div>
+        </header>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
-              {!puedeModificar ? (
-                <p className="text-xs text-orange-600 font-medium mt-0.5">
-                  🔒 Modo Consulta ({usuarioActual?.nombre}). Para editar registros o estatus, seleccione Gerencia o Admin arriba e ingrese su PIN.
-                </p>
-              ) : (
-                <p className="text-xs text-green-600 font-bold mt-0.5">
-                  🔓 Modo Gerencia / Admin Activo ({usuarioActual?.nombre}) - Edición general y de estatus habilitada.
-                </p>
-              )}
-            </div>
-            
+        {/* Sección de Botones de Filtros por Motivo y Diferencia SAE */}
+        <div className="bg-white p-5 rounded-xl shadow-sm mb-6 border border-gray-200 space-y-4">
+          <div>
+            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Motivo:</div>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => window.print()}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
-              >
-                🖨️ Generar Reporte PDF
-              </button>
-              <a
-                href={`/api/faltantes/export?busqueda=${encodeURIComponent(busquedaTexto)}&estatus=${filtroEstatus}&motivo=${filtroMotivo}&alerta=${filtroAlerta}&usuarioId=${filtroUsuario}&fechaInicio=${filtroFechaInicio}&fechaFin=${filtroFechaFin}`}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
-              >
-                📥 Descargar Excel (CSV)
-              </a>
-            </div>
-          </div>
-
-          {/* Filtros de Búsqueda */}
-          <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
-              <div className="w-full md:w-2/3">
-                <input
-                  type="text"
-                  value={busquedaTexto}
-                  onChange={(e) => setBusquedaTexto(e.target.value)}
-                  placeholder="🔍 Buscar por producto, código SAE, proveedor, marca..."
-                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3">
-                <span className="text-xs font-semibold text-gray-600">
-                  Mostrando <strong className="text-blue-600">{faltantesFiltrados.length}</strong> de {faltantes.length} registros
-                </span>
+              {motivosDisponibles.map((motivo) => (
                 <button
-                  onClick={limpiarFiltros}
-                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition"
-                >
-                  🧹 Limpiar Filtros
-                </button>
-              </div>
-            </div>
-
-            {/* Rangos de fechas, estatus, motivos, etc. */}
-            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Rango de Fecha:</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-semibold">Desde:</span>
-                <input
-                  type="date"
-                  value={filtroFechaInicio}
-                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
-                  className="p-1.5 bg-white border border-gray-300 rounded-lg text-xs text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-xs text-gray-500 font-semibold">Hasta:</span>
-                <input
-                  type="date"
-                  value={filtroFechaFin}
-                  onChange={(e) => setFiltroFechaFin(e.target.value)}
-                  className="p-1.5 bg-white border border-gray-300 rounded-lg text-xs text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
-              {[
-                { label: 'Todos', value: 'TODOS' },
-                { label: '🔴 Pendientes', value: 'PENDIENTE' },
-                { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
-                { label: '🟢 Recibidos', value: 'RECIBIDO' },
-                { label: '🟠 Descartados', value: 'DESCARTADO' },
-                { label: '❌ Descontinuados', value: 'DESCONTINUADO' },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setFiltroEstatus(tab.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroEstatus === tab.value ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  key={motivo}
+                  onClick={() => setFiltroMotivo(motivo)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                    filtroMotivo === motivo
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {tab.label}
+                  {motivo}
                 </button>
               ))}
             </div>
           </div>
-          
-          {faltantesFiltrados.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados con los filtros seleccionados.</p>
+
+          <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4">
+            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Diferencia SAE:</div>
+            <div className="flex gap-2">
+              {[
+                { label: 'Todos', value: 'TODOS' },
+                { label: 'Con Diferencia SAE', value: 'CON_DIFERENCIA' },
+                { label: 'Sin Diferencia SAE', value: 'SIN_DIFERENCIA' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFiltroDiferenciaSae(opt.value)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                    filtroDiferenciaSae === opt.value
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de Registros */}
+        <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-200">
+          {loading ? (
+            <div className="p-12 text-center text-gray-500 font-medium">Cargando registros...</div>
+          ) : faltantesFiltrados.length === 0 ? (
+            <div className="p-12 text-center text-gray-500 font-medium">No se encontraron registros de faltantes.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b bg-gray-100 text-gray-700 text-sm">
-                    <th className="p-3">Fecha</th>
-                    <th className="p-3">Producto / Marca</th>
-                    <th className="p-3">Códigos & Proveedor</th>
-                    <th className="p-3">Cant.</th>
-                    <th className="p-3">Motivo</th>
-                    <th className="p-3">Capturado Por</th>
-                    <th className="p-3">Estatus</th>
-                    <th className="p-3 text-center">Acciones</th>
+                  <tr className="bg-gray-100 border-b text-xs font-bold text-gray-600 uppercase tracking-wider">
+                    <th className="p-4">Fecha</th>
+                    <th className="p-4">Producto / Marca</th>
+                    <th className="p-4">Códigos</th>
+                    <th className="p-4 text-center">Cant. Sug.</th>
+                    <th className="p-4">Diferencia SAE</th>
+                    <th className="p-4">Motivo</th>
+                    <th className="p-4">Estatus</th>
+                    <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y text-sm text-gray-800">
+                <tbody className="divide-y divide-gray-200 text-sm">
                   {faltantesFiltrados.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="p-3 text-xs text-gray-500">
-                        {new Date(item.fechaReporte).toLocaleString()}
+                    <tr key={item.id} className="hover:bg-gray-50 transition">
+                      <td className="p-4 text-gray-500 whitespace-nowrap text-xs">
+                        {new Date(item.fechaRegistro).toLocaleString()}
                       </td>
-                      <td className="p-3">
-                        <div className="font-medium">{item.producto}</div>
-                        {item.marca && <div className="text-xs text-blue-600 font-semibold">Marca: {item.marca}</div>}
+                      <td className="p-4 font-medium text-gray-900">
+                        <div>{item.producto}</div>
+                        <div className="text-xs text-purple-600 font-semibold">Marca: {item.marca || 'N/A'}</div>
                       </td>
-                      <td className="p-3 text-xs text-gray-600">
-                        <div>SAE: <span className="font-semibold">{item.codigoSae || 'N/A'}</span></div>
-                        <div>Prov: <span className="font-semibold">{item.codigoProv || 'N/A'}</span></div>
-                        {item.proveedorSugerido && <div className="text-purple-700 font-semibold mt-0.5">Sug: {item.proveedorSugerido}</div>}
+                      <td className="p-4 text-xs text-gray-600">
+                        <div><span className="font-semibold">SAE:</span> {item.codigoSae || 'N/A'}</div>
+                        <div><span className="font-semibold">Prov:</span> {item.codigoProv || 'N/A'}</div>
                       </td>
-                      <td className="p-3 font-bold">{item.cantidadSugerida}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          item.motivo === 'URGENTE' ? 'bg-purple-100 text-purple-700' :
-                          item.motivo === 'NUEVO' ? 'bg-blue-100 text-blue-700' :
-                          item.motivo === 'SIN_EXISTENCIAS' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
+                      <td className="p-4 text-center font-bold text-gray-800">{item.cantidadSugerida}</td>
+                      <td className="p-4">
+                        {item.diferenciaSae ? (
+                          <span className="inline-block px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
+                            {item.diferenciaSae}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic">Sin diferencia</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
                           {item.motivo}
                         </span>
                       </td>
-                      <td className="p-3 text-xs font-medium text-gray-700">
-                        {item.reportadoPor?.nombre || 'General'}
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={item.estatus}
-                          onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          disabled={!puedeModificar}
-                          title={!puedeModificar ? "Debe seleccionar Gerencia/Admin arriba e ingresar el PIN" : "Cambiar estatus"}
-                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
-                            !puedeModificar ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
-                          } ${
-                            item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
-                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
-                            item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
-                            item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
-                            item.estatus === 'DESCONTINUADO' ? 'bg-gray-200 text-gray-800 border-gray-400' :
-                            'bg-gray-100 text-gray-700 border-gray-300'
+                      <td className="p-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            item.estatus === 'PENDIENTE'
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : 'bg-green-50 text-green-700 border border-green-200'
                           }`}
                         >
-                          <option value="PENDIENTE">🔴 PENDIENTE</option>
-                          <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
-                          <option value="RECIBIDO">🟢 RECIBIDO</option>
-                          <option value="DESCARTADO">🟠 DESCARTADO</option>
-                          <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
-                        </select>
+                          {item.estatus}
+                        </span>
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-4 text-center">
                         <button
                           onClick={() => abrirModalEdicion(item)}
-                          disabled={!puedeModificar}
-                          title={!puedeModificar ? "Se requiere Modo Gerencia/Admin activo para modificar registros" : "Editar datos del registro"}
-                          className={`px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 mx-auto ${
-                            !puedeModificar 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : 'bg-amber-500 hover:bg-amber-600 text-white shadow'
-                          }`}
+                          className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-lg shadow transition"
                         >
                           ✏️ Editar
                         </button>
@@ -680,155 +308,182 @@ export default function Home() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* 🛠️ MODAL DE EDICIÓN COMPLETA (Versión 4.0) */}
-      {isEditModalOpen && editingItem && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 print:hidden">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-3">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                ✏️ Modificar Registro de Faltante <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Admin/Gerencia</span>
-              </h3>
-              <button 
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={guardarEdicionCompleta} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
-                <input
-                  type="text"
-                  value={editingItem.producto}
-                  onChange={(e) => setEditingItem({ ...editingItem, producto: e.target.value })}
-                  className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  required
-                />
+        {/* Modal de Edición Protegida con PIN */}
+        {editingItem && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+              <div className="bg-gray-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <span>✏️</span> Modificar Registro Faltante (#{editingItem.id})
+                </h3>
+                <button
+                  onClick={() => setEditingItem(null)}
+                  className="text-gray-400 hover:text-white text-xl font-bold"
+                >
+                  ✕
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código SAE 10</label>
-                  <input
-                    type="text"
-                    value={editingItem.codigoSae || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, codigoSae: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
-                  <input
-                    type="text"
-                    value={editingItem.codigoProv || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, codigoProv: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-                  <input
-                    type="text"
-                    value={editingItem.marca || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, marca: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
+              <form onSubmit={guardarEdicion} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                {errorModal && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                    {errorModal}
+                  </div>
+                )}
+                {successModal && (
+                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+                    {successModal}
+                  </div>
+                )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre o Descripción del Producto *</label>
                   <input
                     type="text"
-                    value={editingItem.proveedorSugerido || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, proveedorSugerido: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editingItem.cantidadSugerida}
-                    onChange={(e) => setEditingItem({ ...editingItem, cantidadSugerida: Number(e.target.value) })}
-                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     required
+                    value={formValues.producto}
+                    onChange={(e) => setFormValues({ ...formValues, producto: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
-                  <select
-                    value={editingItem.motivo}
-                    onChange={(e) => setEditingItem({ ...editingItem, motivo: e.target.value as MotivoFaltante })}
-                    className="w-full p-2.5 border rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
-                    <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
-                    <option value="URGENTE">🚨 Pedido Urgente</option>
-                    <option value="NUEVO">✨ Producto Nuevo</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Código SAE 10</label>
+                    <input
+                      type="text"
+                      value={formValues.codigoSae}
+                      onChange={(e) => setFormValues({ ...formValues, codigoSae: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Código Proveedor</label>
+                    <input
+                      type="text"
+                      value={formValues.codigoProv}
+                      onChange={(e) => setFormValues({ ...formValues, codigoProv: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Estatus</label>
-                  <select
-                    value={editingItem.estatus}
-                    onChange={(e) => setEditingItem({ ...editingItem, estatus: e.target.value as EstatusFaltante })}
-                    className="w-full p-2.5 border rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="PENDIENTE">🔴 PENDIENTE</option>
-                    <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
-                    <option value="RECIBIDO">🟢 RECIBIDO</option>
-                    <option value="DESCARTADO">🟠 DESCARTADO</option>
-                    <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
-                  </select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Marca</label>
+                    <input
+                      type="text"
+                      value={formValues.marca}
+                      onChange={(e) => setFormValues({ ...formValues, marca: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cantidad Sugerida *</label>
+                    <input
+                      type="number"
+                      required
+                      value={formValues.cantidadSugerida}
+                      onChange={(e) => setFormValues({ ...formValues, cantidadSugerida: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center space-x-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <input
-                  type="checkbox"
-                  id="editDiferencia"
-                  checked={editingItem.diferenciaSae}
-                  onChange={(e) => setEditingItem({ ...editingItem, diferenciaSae: e.target.checked })}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="editDiferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
-                  ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
-                </label>
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Motivo del Faltante</label>
+                    <select
+                      value={formValues.motivo}
+                      onChange={(e) => setFormValues({ ...formValues, motivo: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    >
+                      <option value="Sin Existencias">Sin Existencias</option>
+                      <option value="Stock Bajo">Stock Bajo</option>
+                      <option value="Pedido Especial">Pedido Especial</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Estatus</label>
+                    <select
+                      value={formValues.estatus}
+                      onChange={(e) => setFormValues({ ...formValues, estatus: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                    >
+                      <option value="PENDIENTE">PENDIENTE</option>
+                      <option value="SURTIDO">SURTIDO</option>
+                      <option value="CANCELADO">CANCELADO</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Diferencia SAE</label>
+                  <input
+                    type="text"
+                    value={formValues.diferenciaSae}
+                    onChange={(e) => setFormValues({ ...formValues, diferenciaSae: e.target.value })}
+                    placeholder="Ej. ¿Diferencia de inventario? (SAE 10 dice que sí hay)"
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                  />
+                </div>
+
+                <hr className="my-2" />
+
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
+                  <h4 className="text-xs font-bold text-amber-900 uppercase">Autorización Requerida (Admin / Gerencia)</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Autoriza:</label>
+                      <select
+                        value={usuarioId}
+                        onChange={(e) => setUsuarioId(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-black"
+                        required
+                      >
+                        <option value="">Seleccionar...</option>
+                        {usuarios.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.nombre} ({u.rol})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">PIN de Acceso:</label>
+                      <input
+                        type="password"
+                        placeholder="PIN"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-black"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(null)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 shadow transition"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-
-      <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
-        JALONEME LABS 2026 - SUMIFEL
-      </footer>
-    </main>
+        )}
+      </div>
+    </div>
   );
 }
