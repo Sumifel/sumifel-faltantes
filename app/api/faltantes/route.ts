@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const USUARIOS_OBLIGATORIOS = [
+  { nombre: 'Mostrador', rol: 'EMPLEADO' },
   { nombre: 'Gerente', rol: 'GERENCIA' },
   { nombre: 'Administrador', rol: 'ADMIN' },
   { nombre: 'Ventas 02', rol: 'VENTAS' },
@@ -9,7 +10,7 @@ const USUARIOS_OBLIGATORIOS = [
   { nombre: 'Ventas 12', rol: 'VENTAS' },
   { nombre: 'Ventas 16', rol: 'VENTAS' },
   { nombre: 'Almacen', rol: 'ALMACEN' },
-  { nombre: 'Mostrador', rol: 'EMPLEADO' },
+  
 ];
 
 export async function GET() {
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
       marca,
       proveedorSugerido,
       cantidad,
+      cantidadSugerida,
       motivo,
       alertaSaes,
       reportadoPorId,
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
       codigoProveedor: codigoProveedor || null,
       marca: marca || null,
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
-      cantidad: Number(cantidad) || 1,
+      cantidadSugerida: Number(cantidadSugerida ?? cantidad) || 1,
       motivo: motivo || 'Alta Demanda',
       alertaSaes: Boolean(alertaSaes),
     };
