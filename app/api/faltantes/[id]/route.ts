@@ -1,66 +1,63 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma'; // Asegúrate de que esta ruta coincida con tu configuración de Prisma
 
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const resolvedParams = await Promise.resolve(context.params);
-    const id = parseInt(resolvedParams.id);
-    
+    const id = Number(params.id);
     const body = await request.json();
-    const { estatus, usuarioId, pin } = body;
+    const { 
+      producto, 
+      codigoSae, 
+      codigoProv, 
+      marca, 
+      proveedorSugerido, 
+      cantidadSugerida, 
+      motivo, 
+      diferenciaSae, 
+      estatus, 
+      usuarioId, 
+      pin 
+    } = body;
 
+    // Validar que se envíe el usuario
     if (!usuarioId) {
-      return NextResponse.json({ error: 'Debe identificar qué usuario está realizando la acción.' }, { status: 400 });
+      return NextResponse.json({ error: 'Usuario no especificado' }, { status: 400 });
     }
 
+    // Verificar permisos de Gerencia o Admin
     const usuario = await prisma.usuario.findUnique({
-      where: { id: parseInt(usuarioId) },
+      where: { id: Number(usuarioId) }
     });
 
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado.' }, { status: 404 });
+    if (!usuario || (usuario.rol !== 'ADMIN' && usuario.rol !== 'GERENCIA')) {
+      return NextResponse.json({ error: 'No autorizado para realizar modificaciones' }, { status: 403 });
     }
 
-    // Validar si es Gerencia o Admin
-    if (usuario.rol !== 'ADMIN' && usuario.rol !== 'GERENCIA') {
-      return NextResponse.json({ error: 'Acceso denegado: Solo el Gerente o Administrador pueden cambiar el estatus.' }, { status: 403 });
-    }
-
-    // Validar el PIN si el usuario tiene uno configurado
-    if (usuario.pin && usuario.pin !== pin) {
-      return NextResponse.json({ error: 'PIN de seguridad incorrecto.' }, { status: 401 });
-    }
-
+    // Realizar la actualización en la base de datos con todos los campos enviados
     const faltanteActualizado = await prisma.faltante.update({
       where: { id },
-      data: { estatus },
+      data: {
+        ...(producto !== undefined && { producto }),
+        ...(codigoSae !== undefined && { codigoSae }),
+        ...(codigoProv !== undefined && { codigoProv }),
+        ...(marca !== undefined && { marca }),
+        ...(proveedorSugerido !== undefined && { proveedorSugerido }),
+        ...(cantidadSugerida !== undefined && { cantidadSugerida: Number(cantidadSugerida) }),
+        ...(motivo !== undefined && { motivo }),
+        ...(diferenciaSae !== undefined && { diferenciaSae }),
+        ...(estatus !== undefined && { estatus }),
+      },
+      include: {
+        reportadoPor: true
+      }
     });
 
-    return NextResponse.json(faltanteActualizado);
+    return NextResponse.json({ success: true, faltante: faltanteActualizado });
   } catch (error) {
-    console.error('Error al actualizar estatus:', error);
-    return NextResponse.json({ error: 'Error al actualizar el estatus.' }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
-) {
-  try {
-    const resolvedParams = await Promise.resolve(context.params);
-    const id = parseInt(resolvedParams.id);
-
-    await prisma.faltante.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: 'Faltante eliminado correctamente' });
-  } catch (error) {
-    console.error('Error al eliminar faltante:', error);
-    return NextResponse.json({ error: 'Error al eliminar el faltante' }, { status: 500 });
+    console.error('Error al actualizar el faltante:', error);
+    return NextResponse.json({ error: 'Error interno del servidor al actualizar' }, { status: 500 });
   }
 }
