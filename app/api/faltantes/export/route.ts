@@ -8,16 +8,18 @@ export async function GET() {
       include: { reportadoPor: true },
     })
 
-    // Encabezados del CSV (puedes abrirlos directo en Excel)
-    let csv = 'ID,Producto,Codigo SAE,Cantidad Sugerida,Diferencia SAE,Estatus,Fecha\n'
+    // Definimos las columnas que tendrá el archivo de Excel
+    let csv = 'ID,Fecha de Captura,Producto,Codigo SAE,Codigo Proveedor,Cantidad Sugerida,Motivo,Diferencia SAE,Estatus\n'
 
     faltantes.forEach((f) => {
       const producto = `"${f.producto.replace(/"/g, '""')}"`
       const codigoSae = `"${f.codigoSae || ''}"`
+      const codigoProv = `"${f.codigoProv || ''}"`
+      const motivo = f.motivo
       const diferencia = f.diferenciaSae ? 'SÍ' : 'NO'
       const fecha = new Date(f.fechaReporte).toLocaleString()
       
-      csv += `${f.id},${producto},${codigoSae},${f.cantidadSugerida},${diferencia},${f.estatus},"${fecha}"\n`
+      csv += `${f.id},"${fecha}",${producto},${codigoSae},${codigoProv},${f.cantidadSugerida},${motivo},${diferencia},${f.estatus}\n`
     })
 
     return new NextResponse(csv, {

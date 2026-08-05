@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET: Obtener todos los faltantes ordenados del más reciente al más antiguo
+// GET: Trae la lista de todos los faltantes ordenados del más reciente al más antiguo
 export async function GET() {
   try {
     const faltantes = await prisma.faltante.findMany({
       orderBy: { fechaReporte: 'desc' },
-      include: {
-        reportadoPor: true, // Incluye los datos del usuario que lo reportó
-      },
+      include: { reportadoPor: true },
     })
     return NextResponse.json(faltantes)
   } catch (error) {
@@ -17,31 +15,27 @@ export async function GET() {
   }
 }
 
-// POST: Registrar un nuevo faltante asegurando un usuario válido
+// POST: Recibe los datos del formulario web y los guarda en la base de datos
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { producto, codigoSae, cantidadSugerida, diferenciaSae } = body
+    const { producto, codigoSae, codigoProv, cantidadSugerida, motivo, diferenciaSae } = body
 
-    // 1. Verificar si existe al menos un usuario en la base de datos
+    // Buscamos un usuario por defecto para asociar el reporte
     let usuario = await prisma.usuario.findFirst()
-
-    // 2. Si la tabla de usuarios está vacía, creamos uno por defecto automáticamente
     if (!usuario) {
       usuario = await prisma.usuario.create({
-        data: {
-          nombre: 'Mostrador General',
-          rol: 'MOSTRADOR',
-        },
+        data: { nombre: 'Mostrador General', rol: 'MOSTRADOR' },
       })
     }
 
-    // 3. Crear el registro en la tabla Faltante usando los campos exactos del esquema
     const nuevoFaltante = await prisma.faltante.create({
       data: {
         producto,
         codigoSae: codigoSae || null,
+        codigoProv: codigoProv || null, // Aquí guardamos el texto libre que escriban del proveedor
         cantidadSugerida: Number(cantidadSugerida),
+        motivo: motivo || 'ALTA_DEMANDA',
         diferenciaSae: Boolean(diferenciaSae),
         reportadoPorId: usuario.id,
       },

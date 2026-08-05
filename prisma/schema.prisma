@@ -7,24 +7,31 @@ generator client {
 }
 
 model Usuario {
-  id        Int        @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   nombre    String
-  rol       Rol        @default(MOSTRADOR)
+  rol       Rol       @default(MOSTRADOR)
   faltantes Faltante[]
 }
 
 model Faltante {
-  id                Int      @id @default(autoincrement())
-  producto          String
-  codigoSae         String?
-  codigoProv	    String?
-  cantidadSugerida  Float
-  diferenciaSae     Boolean  @default(false)
-  estatus           Estatus  @default(PENDIENTE)
-  reportadoPorId    Int
-  reportadoPor      Usuario  @relation(fields: [reportadoPorId], references: [id])
-  fechaReporte      DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  producto           String
+  codigoSae          String?
+  codigoProv         String?
+  cantidadSugerida   Float
+  motivo             Motivo   @default(ALTA_DEMANDA)
+  diferenciaSae      Boolean  @default(false)
+  estatus            Estatus  @default(PENDIENTE)
+  reportadoPorId     Int
+  reportadoPor       Usuario  @relation(fields: [reportadoPorId], references: [id])
+  fechaReporte       DateTime @default(now())
   fechaActualizacion DateTime @updatedAt
+}
+
+enum Motivo {
+  NUEVO
+  URGENTE
+  ALTA_DEMANDA
 }
 
 enum Rol {
@@ -35,6 +42,7 @@ enum Rol {
   MOSTRADOR
   COMPRAS
   ALMACEN
+  GERENCIA
 }
 
 enum Estatus {
