@@ -8,7 +8,7 @@ interface Usuario {
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
+type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO';
 type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA' | 'SIN_EXISTENCIAS';
 
 interface Faltante {
@@ -52,6 +52,10 @@ export default function Home() {
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
   const [filtroAlerta, setFiltroAlerta] = useState<string>('TODOS');
   const [filtroUsuario, setFiltroUsuario] = useState<string>('TODOS');
+  const [filtroProveedor, setFiltroProveedor] = useState<string>('TODOS');
+  const [filtroMarca, setFiltroMarca] = useState<string>('TODOS');
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -204,17 +208,26 @@ export default function Home() {
   };
 
   const faltantesFiltrados = faltantes.filter((item) => {
-    const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
-    const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
-    const pasaAlerta = 
-      filtroAlerta === 'TODOS' || 
-      (filtroAlerta === 'SI' && item.diferenciaSae) || 
-      (filtroAlerta === 'NO' && !item.diferenciaSae);
-    const pasaUsuario = 
-      filtroUsuario === 'TODOS' || 
-      item.reportadoPor?.id.toString() === filtroUsuario;
+  const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
+  const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
+  const pasaAlerta = 
+    filtroAlerta === 'TODOS' || 
+    (filtroAlerta === 'SI' && item.diferenciaSae) || 
+    (filtroAlerta === 'NO' && !item.diferenciaSae);
+  const pasaUsuario = 
+    filtroUsuario === 'TODOS' || 
+    item.reportadoPor?.id.toString() === filtroUsuario;
 
-    return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
+  // Nuevos filtros
+  const pasaProveedor = filtroProveedor === 'TODOS' || item.proveedorSugerido === filtroProveedor;
+  const pasaMarca = filtroMarca === 'TODOS' || item.marca === filtroMarca;
+  
+  // Validación de fechas (comparando la fecha de reporte)
+  const fechaItem = item.fechaReporte ? item.fechaReporte.slice(0, 10) : '';
+  const pasaFechaInicio = !filtroFechaInicio || fechaItem >= filtroFechaInicio;
+  const pasaFechaFin = !filtroFechaFin || fechaItem <= filtroFechaFin;
+
+  return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario && pasaProveedor && pasaMarca && pasaFechaInicio && pasaFechaFin;
   });
 
   // Función para exportar respetando filtros activos
@@ -252,7 +265,8 @@ export default function Home() {
     link.click();
     document.body.removeChild(link);
   };
-
+  const proveedoresUnicos = Array.from(new Set(faltantes.map(i => i.proveedorSugerido))).filter(Boolean);
+  const marcasUnicas = Array.from(new Set(faltantes.map(i => i.marca))).filter(Boolean);
   const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
 
   return (
@@ -426,6 +440,56 @@ export default function Home() {
               <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
             </div>
+            {/* Filtros de Proveedor, Marca y Fechas */}
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-200 print:hidden">
+  <div>
+    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Proveedor:</label>
+    <select
+      value={filtroProveedor}
+      onChange={(e) => setFiltroProveedor(e.target.value)}
+      className="w-full p-2 text-xs border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none"
+    >
+      <option value="TODOS">Todos los proveedores</option>
+      {proveedoresUnicos.map((p, idx) => (
+        <option key={idx} value={p}>{p}</option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Marca:</label>
+    <select
+      value={filtroMarca}
+      onChange={(e) => setFiltroMarca(e.target.value)}
+      className="w-full p-2 text-xs border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none"
+    >
+      <option value="TODOS">Todas las marcas</option>
+      {marcasUnicas.map((m, idx) => (
+        <option key={idx} value={m}>{m}</option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Desde:</label>
+    <input
+      type="date"
+      value={filtroFechaInicio}
+      onChange={(e) => setFiltroFechaInicio(e.target.value)}
+      className="w-full p-2 text-xs border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none"
+    />
+  </div>
+
+  <div>
+    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Hasta:</label>
+    <input
+      type="date"
+      value={filtroFechaFin}
+      onChange={(e) => setFiltroFechaFin(e.target.value)}
+      className="w-full p-2 text-xs border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none"
+    />
+  </div>
+</div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
               <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
               <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
