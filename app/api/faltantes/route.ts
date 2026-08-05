@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       producto,
       codigoSae,
       codigoProveedor,
+      codigoProv,
       marca,
       proveedorSugerido,
       cantidad,
@@ -71,8 +72,6 @@ export async function POST(request: Request) {
 
     const finalCantidadSugerida = Number(cantidadSugerida ?? cantidad) || 1;
     const finalReportadoPorId = Number(reportadoPorId ?? usuarioId);
-
-    // Prisma exige 'producto' como obligatorio en el esquema
     const finalProducto = producto || descripcion || nombre;
 
     if (!finalProducto) {
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
     const dataToCreate: any = {
       producto: String(finalProducto),
       codigoSae: codigoSae || null,
-      codigoProveedor: codigoProveedor || null,
+      codigoProv: codigoProv || codigoProveedor || null, // <--- Corregido al nombre exacto de la BD
       marca: marca || null,
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
       cantidadSugerida: finalCantidadSugerida,
