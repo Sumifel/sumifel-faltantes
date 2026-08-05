@@ -22,9 +22,9 @@ model Usuario {
   id        Int        @id @default(autoincrement())
   nombre    String     @unique
   rol       String     @default("EMPLEADO")
+  pin       String?    // <-- Nuevo campo para el PIN secreto
   faltantes Faltante[]
 }
-
 model Faltante {
   id                Int      @id @default(autoincrement())
   producto          String

@@ -9,13 +9,12 @@ export async function PATCH(
     const params = await context.params;
     const id = parseInt(params.id);
     const body = await request.json();
-    const { estatus, usuarioId } = body;
+    const { estatus, usuarioId, pin } = body;
 
     if (!usuarioId) {
       return NextResponse.json({ error: 'Debe identificar qué usuario está realizando la acción.' }, { status: 400 });
     }
 
-    // Verificar el rol del usuario que intenta hacer el cambio
     const usuario = await prisma.usuario.findUnique({
       where: { id: parseInt(usuarioId) },
     });
@@ -27,6 +26,11 @@ export async function PATCH(
     // Validar si es Gerencia o Admin
     if (usuario.rol !== 'ADMIN' && usuario.rol !== 'GERENCIA') {
       return NextResponse.json({ error: 'Acceso denegado: Solo el Gerente o Administrador pueden cambiar el estatus.' }, { status: 403 });
+    }
+
+    // Validar el PIN si el usuario tiene uno configurado
+    if (usuario.pin && usuario.pin !== pin) {
+      return NextResponse.json({ error: 'PIN de seguridad incorrecto.' }, { status: 401 });
     }
 
     const faltanteActualizado = await prisma.faltante.update({
