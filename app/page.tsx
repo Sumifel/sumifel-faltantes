@@ -8,8 +8,8 @@ interface Usuario {
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
-type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA';
+type EstatusFaltante = 'PENDIENTE' | 'EN_TRANSITO' | 'RECIBIDO';
+type MotivoFaltante = 'NUEVO' |'Sin_ExistenciaS'| 'URGENTE' | 'ALTA_DEMANDA';
 
 interface Faltante {
   id: number;
@@ -356,6 +356,7 @@ export default function Home() {
                   onChange={(e) => setMotivo(e.target.value as MotivoFaltante)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
                 >
+                  <option value="Sin_Existencias">⚠️ Sin Existencias</option>
                   <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
                   <option value="URGENTE">🚨 Pedido Urgente</option>
                   <option value="NUEVO">✨ Producto Nuevo</option>
@@ -425,7 +426,7 @@ export default function Home() {
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '🔴 Pendientes', value: 'PENDIENTE' },
-                { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
+                { label: '🟡 En TRANSITO', value: 'EN_TRANSITO' },
                 { label: '🟢 Recibidos', value: 'RECIBIDO' },
               ].map((tab) => (
                 <button
@@ -446,6 +447,7 @@ export default function Home() {
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '✨ Nuevos', value: 'NUEVO' },
+                { label: '⚠️ Sin Existencia', value: 'Sin_Existencia' },
                 { label: '🚨 Urgentes', value: 'URGENTE' },
                 { label: '🔥 Alta Demanda', value: 'ALTA_DEMANDA' },
               ].map((tab) => (
@@ -560,12 +562,12 @@ export default function Home() {
                             !puedeModificar ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
                           } ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
-                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                            item.estatus === 'EN_TRANSITO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
                             'bg-green-50 text-green-700 border-green-300'
                           }`}
                         >
                           <option value="PENDIENTE">🔴 PENDIENTE</option>
-                          <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
+                          <option value="EN_TRANSITO">🟡 EN TRANSITO</option>
                           <option value="RECIBIDO">🟢 RECIBIDO</option>
                         </select>
                       </td>
