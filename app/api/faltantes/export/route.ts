@@ -10,7 +10,6 @@ export async function GET(request: Request) {
     const alerta = searchParams.get('alerta') || 'TODOS';
     const usuarioId = searchParams.get('usuarioId') || 'TODOS';
 
-    // Construir filtros para la consulta
     const where: any = {};
 
     if (estatus !== 'TODOS') {
@@ -46,15 +45,15 @@ export async function GET(request: Request) {
       orderBy: { fechaReporte: 'desc' },
     });
 
-    // Encabezados exactos en orden
     const headers = [
       'ID',
       'Fecha',
+      'Hora',
       'Producto',
       'Marca',
       'Codigo SAE',
       'Codigo Prov',
-      'Proveedor Sugerido',
+      'Proveedor',
       'Cantidad',
       'Motivo',
       'Reportado Por',
@@ -65,12 +64,14 @@ export async function GET(request: Request) {
     const csvRows = [headers.join(',')];
 
     for (const item of faltantes) {
-      // Formatear fecha limpia sin comas internas que rompan el CSV
-      const fechaFormateada = new Date(item.fechaReporte).toISOString().replace('T', ' ').substring(0, 19);
+      const dateObj = new Date(item.fechaReporte);
+      const fechaStr = dateObj.toLocaleDateString('es-MX');
+      const horaStr = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
       const row = [
         item.id,
-        `"${fechaFormateada}"`,
+        `"${fechaStr}"`,
+        `"${horaStr}"`,
         `"${(item.producto || '').replace(/"/g, '""')}"`,
         `"${(item.marca || '').replace(/"/g, '""')}"`,
         `"${(item.codigoSae || '').replace(/"/g, '""')}"`,
@@ -86,7 +87,6 @@ export async function GET(request: Request) {
       csvRows.push(row.join(','));
     }
 
-    // Agregar BOM al inicio para que Excel reconozca correctamente las tildes y caracteres UTF-8
     const csvContent = '\uFEFF' + csvRows.join('\n');
 
     return new NextResponse(csvContent, {
