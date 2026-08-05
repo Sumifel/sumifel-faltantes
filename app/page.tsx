@@ -30,7 +30,10 @@ export default function Home() {
   const [faltantes, setFaltantes] = useState<Faltante[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   
-  // Campos del formulario
+  // Quién está usando la pantalla actualmente (Sesión Activa)
+  const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
+
+  // Campos del formulario de registro
   const [producto, setProducto] = useState('');
   const [codigoSae, setCodigoSae] = useState('');
   const [codigoProv, setCodigoProv] = useState('');
@@ -39,7 +42,7 @@ export default function Home() {
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState<'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA'>('ALTA_DEMANDA');
   const [diferenciaSae, setDiferenciaSae] = useState(false);
-  const [usuarioId, setUsuarioId] = useState('');
+  const [usuarioReportaId, setUsuarioReportaId] = useState('');
 
   // Filtros y estados visuales
   const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
@@ -54,7 +57,13 @@ export default function Home() {
       const res = await fetch('/api/faltantes');
       const data = await res.json();
       if (data.faltantes) setFaltantes(data.faltantes);
-      if (data.usuarios) setUsuarios(data.usuarios);
+      if (data.usuarios) {
+        setUsuarios(data.usuarios);
+        // Por defecto asignar el primero si no hay sesión
+        if (!usuarioSesionId && data.usuarios.length > 0) {
+          setUsuarioSesionId(data.usuarios[0].id.toString());
+        }
+      }
     } catch (error) {
       console.error('Error al cargar datos', error);
     }
@@ -64,9 +73,13 @@ export default function Home() {
     cargarDatos();
   }, []);
 
+  // Obtener el objeto del usuario actual
+  const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
+  const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!producto || !cantidad || !usuarioId) {
+    if (!producto || !cantidad || !usuarioReportaId) {
       alert('Por favor complete los campos obligatorios y seleccione quién reporta.');
       return;
     }
@@ -87,7 +100,7 @@ export default function Home() {
           cantidadSugerida: parseFloat(cantidad),
           motivo,
           diferenciaSae,
-          usuarioId: parseInt(usuarioId),
+          usuarioId: parseInt(usuarioReportaId),
         }),
       });
 
@@ -113,12 +126,22 @@ export default function Home() {
   };
 
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
+    if (!esGerenteOAdmin) {
+      alert('⛔ Acceso restringido: Solo el Gerente o el Administrador pueden cambiar el estatus de los pedidos.');
+      return;
+    }
+
     try {
       const res = await fetch(`/api/faltantes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estatus: nuevoEstatus }),
+        body: JSON.stringify({ 
+          estatus: nuevoEstatus,
+          usuarioId: parseInt(usuarioSesionId)
+        }),
       });
+
+      const data = await res.json();
 
       if (res.ok) {
         setFaltantes((prev) =>
@@ -127,14 +150,13 @@ export default function Home() {
           )
         );
       } else {
-        alert('No se pudo cambiar el estatus.');
+        alert(data.error || 'No se pudo cambiar el estatus.');
       }
     } catch (error) {
       console.error('Error al cambiar estatus:', error);
     }
   };
 
-  // Filtrado completo
   const faltantesFiltrados = faltantes.filter((item) => {
     const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
     const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
@@ -152,13 +174,31 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Cabecera */}
-        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 print:bg-none print:text-black print:p-2">
-          <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
-          <p className="text-blue-100 text-sm mt-1 print:hidden">Gestión avanzada de inventario y abastecimiento</p>
+        {/* Cabecera y Selector de Sesión */}
+        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
+            <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento</p>
+          </div>
+
+          {/* Selector de Usuario Activo / Sesión */}
+          <div className="bg-blue-700 p-3 rounded-lg border border-blue-500 w-full md:w-auto">
+            <label className="block text-xs font-semibold text-blue-200 mb-1">👤 ¿Quién está usando el sistema ahora?</label>
+            <select
+              value={usuarioSesionId}
+              onChange={(e) => setUsuarioSesionId(e.target.value)}
+              className="w-full md:w-64 p-2 bg-white text-black font-semibold rounded text-sm focus:outline-none"
+            >
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre} ({u.rol}) {u.rol === 'ADMIN' || u.rol === 'GERENCIA' ? '🔑 [Gerencia]' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Formulario */}
+        {/* Formulario para registrar */}
         <div className="bg-white p-6 rounded-xl shadow-md mb-8 print:hidden">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Reportar Nuevo Faltante</h2>
           
@@ -185,8 +225,8 @@ export default function Home() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reportado por (Usuario) *</label>
                 <select
-                  value={usuarioId}
-                  onChange={(e) => setUsuarioId(e.target.value)}
+                  value={usuarioReportaId}
+                  onChange={(e) => setUsuarioReportaId(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
                   required
                 >
@@ -300,7 +340,14 @@ export default function Home() {
         {/* Historial y Filtros */}
         <div className="bg-white p-6 rounded-xl shadow-md">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
-            <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
+              {!esGerenteOAdmin && (
+                <p className="text-xs text-orange-600 font-medium mt-0.5">
+                  🔒 Estás viendo como <span className="font-bold">{usuarioActual?.nombre}</span> (Modo consulta/registro. Solo Gerencia y Admin pueden cambiar estatus).
+                </p>
+              )}
+            </div>
             
             <div className="flex flex-wrap gap-2">
               <button
@@ -318,7 +365,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Panel de Filtros Avanzados */}
+          {/* Panel de Filtros */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
@@ -451,7 +498,11 @@ export default function Home() {
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none print:border-none print:bg-transparent ${
+                          disabled={!esGerenteOAdmin}
+                          title={!esGerenteOAdmin ? "Solo Gerencia y Administrador pueden modificar el estatus" : "Cambiar estatus"}
+                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
+                            !esGerenteOAdmin ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
+                          } ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
                             'bg-green-50 text-green-700 border-green-300'
