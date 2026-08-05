@@ -31,6 +31,10 @@ export default function Home() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   
   const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
+  
+  // Estados para el control de sesión segura por PIN
+  const [pinGuardado, setPinGuardado] = useState<string>('');
+  const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
 
   const [producto, setProducto] = useState('');
   const [codigoSae, setCodigoSae] = useState('');
@@ -71,6 +75,28 @@ export default function Home() {
 
   const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
   const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
+
+  // Manejar el cambio de usuario superior con autenticación única de PIN
+  const handleCambioUsuario = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nuevoId = e.target.value;
+    setUsuarioSesionId(nuevoId);
+    
+    const user = usuarios.find(u => u.id.toString() === nuevoId);
+    if (user && (user.rol === 'ADMIN' || user.rol === 'GERENCIA')) {
+      const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${user.nombre} para habilitar la edición:`);
+      if (pin !== null && pin.trim() !== '') {
+        setPinGuardado(pin);
+        setAutorizadoGerencia(true);
+      } else {
+        setPinGuardado('');
+        setAutorizadoGerencia(false);
+        alert('Acceso de gerencia no autorizado. Quedará en modo consulta.');
+      }
+    } else {
+      setPinGuardado('');
+      setAutorizadoGerencia(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,15 +147,8 @@ export default function Home() {
   };
 
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
-    if (!esGerenteOAdmin) {
-      alert('⛔ Acceso restringido: Solo el Gerente o el Administrador pueden cambiar el estatus de los pedidos.');
-      cargarDatos();
-      return;
-    }
-
-    const pinIngresado = prompt(`🔒 Acción protegida\nPor favor ingrese el PIN de seguridad de ${usuarioActual?.nombre}:`);
-    
-    if (pinIngresado === null) {
+    if (!esGerenteOAdmin || !autorizadoGerencia) {
+      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN.');
       cargarDatos();
       return;
     }
@@ -141,7 +160,7 @@ export default function Home() {
         body: JSON.stringify({ 
           estatus: nuevoEstatus,
           usuarioId: parseInt(usuarioSesionId),
-          pin: pinIngresado
+          pin: pinGuardado
         }),
       });
 
@@ -154,7 +173,13 @@ export default function Home() {
           )
         );
       } else {
-        alert(data.error || 'No se pudo cambiar el estatus.');
+        if (res.status === 401) {
+          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
+          setAutorizadoGerencia(false);
+          setPinGuardado('');
+        } else {
+          alert(data.error || 'No se pudo cambiar el estatus.');
+        }
         cargarDatos();
       }
     } catch (error) {
@@ -177,6 +202,8 @@ export default function Home() {
     return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
   });
 
+  const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
+
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -190,7 +217,7 @@ export default function Home() {
             <label className="block text-xs font-semibold text-blue-200 mb-1">👤 ¿Quién está usando el sistema ahora?</label>
             <select
               value={usuarioSesionId}
-              onChange={(e) => setUsuarioSesionId(e.target.value)}
+              onChange={handleCambioUsuario}
               className="w-full md:w-64 p-2 bg-white text-black font-semibold rounded text-sm focus:outline-none"
             >
               {usuarios.map((u) => (
@@ -344,9 +371,13 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
-              {!esGerenteOAdmin && (
+              {!puedeModificar ? (
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
-                  🔒 Estás viendo como <span className="font-bold">{usuarioActual?.nombre}</span> (Modo consulta/registro. Solo Gerencia y Admin pueden cambiar estatus).
+                  🔒 Modo Consulta ({usuarioActual?.nombre}). Para modificar estatus, seleccione Gerencia o Admin arriba e ingrese su PIN.
+                </p>
+              ) : (
+                <p className="text-xs text-green-600 font-bold mt-0.5">
+                  🔓 Modo Gerencia / Admin Activo ({usuarioActual?.nombre}) - Modificación de estatus habilitada.
                 </p>
               )}
             </div>
@@ -499,10 +530,10 @@ export default function Home() {
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          disabled={!esGerenteOAdmin}
-                          title={!esGerenteOAdmin ? "Solo Gerencia y Administrador pueden modificar el estatus" : "Cambiar estatus"}
+                          disabled={!puedeModificar}
+                          title={!puedeModificar ? "Debe seleccionar Gerencia/Admin arriba e ingresar el PIN" : "Cambiar estatus"}
                           className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
-                            !esGerenteOAdmin ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
+                            !puedeModificar ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
                           } ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
