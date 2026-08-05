@@ -40,6 +40,8 @@ export default function Home() {
   // Filtros y estados visuales
   const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
+  const [filtroAlerta, setFiltroAlerta] = useState<string>('TODOS');
+  const [filtroUsuario, setFiltroUsuario] = useState<string>('TODOS');
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -124,11 +126,19 @@ export default function Home() {
     }
   };
 
-  // Filtrado combinado por estatus y por motivo
+  // Filtrado completo (estatus, motivo, alerta sae, usuario)
   const faltantesFiltrados = faltantes.filter((item) => {
     const pasaEstatus = filtroEstatus === 'TODOS' || item.estatus === filtroEstatus;
     const pasaMotivo = filtroMotivo === 'TODOS' || item.motivo === filtroMotivo;
-    return pasaEstatus && pasaMotivo;
+    const pasaAlerta = 
+      filtroAlerta === 'TODOS' || 
+      (filtroAlerta === 'SI' && item.diferenciaSae) || 
+      (filtroAlerta === 'NO' && !item.diferenciaSae);
+    const pasaUsuario = 
+      filtroUsuario === 'TODOS' || 
+      item.reportadoPor?.id.toString() === filtroUsuario;
+
+    return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
   });
 
   return (
@@ -279,11 +289,11 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Barras de Filtros (Estatus y Motivo) */}
+          {/* Panel de Filtros Avanzados */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
             {/* Filtro por Estatus */}
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-20">Estatus:</span>
+              <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '🔴 Pendientes', value: 'PENDIENTE' },
@@ -306,7 +316,7 @@ export default function Home() {
 
             {/* Filtro por Motivo */}
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-20">Motivo:</span>
+              <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '✨ Nuevos', value: 'NUEVO' },
@@ -323,6 +333,56 @@ export default function Home() {
                   }`}
                 >
                   {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro por Alerta SAE */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
+              {[
+                { label: 'Todos', value: 'TODOS' },
+                { label: '⚠️ Con Diferencia', value: 'SI' },
+                { label: '✔️ Sin Diferencia', value: 'NO' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setFiltroAlerta(tab.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    filtroAlerta === tab.value
+                      ? 'bg-yellow-600 text-white shadow'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro por Usuario (Reportado por) */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
+              <button
+                onClick={() => setFiltroUsuario('TODOS')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  filtroUsuario === 'TODOS'
+                    ? 'bg-gray-800 text-white shadow'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                Todos
+              </button>
+              {usuarios.map((u) => (
+                <button
+                  key={u.id}
+                  onClick={() => setFiltroUsuario(u.id.toString())}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    filtroUsuario === u.id.toString()
+                      ? 'bg-gray-800 text-white shadow'
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {u.nombre}
                 </button>
               ))}
             </div>
