@@ -66,10 +66,13 @@ export async function POST(request: Request) {
       cantidadSugerida,
       motivo,
       alertaSaes,
+      diferenciaSae,
+      estatus,
       reportadoPorId,
       usuarioId,
     } = body;
 
+    // Validación y respaldo de campos principales
     const finalCantidadSugerida = Number(cantidadSugerida ?? cantidad) || 1;
     const finalReportadoPorId = Number(reportadoPorId ?? usuarioId);
     const finalProducto = producto || descripcion || nombre;
@@ -78,19 +81,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre o descripción del producto es obligatorio.' }, { status: 400 });
     }
 
+    // Construcción estricta compatible al 100% con Prisma
     const dataToCreate: any = {
       producto: String(finalProducto),
       codigoSae: codigoSae || null,
-      codigoProv: codigoProv || codigoProveedor || null, // <--- Corregido al nombre exacto de la BD
+      codigoProv: codigoProv || codigoProveedor || null,
       marca: marca || null,
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
       cantidadSugerida: finalCantidadSugerida,
-      motivo: motivo || 'Alta Demanda',
+      motivo: motivo || 'ALTA_DEMANDA',
       alertaSaes: Boolean(alertaSaes),
     };
 
-    if (descripcion !== undefined) dataToCreate.descripcion = descripcion;
+    // Campos opcionales adicionales si el frontend los envía
+    if (diferenciaSae !== undefined) {
+      dataToCreate.diferenciaSae = Boolean(diferenciaSae);
+    }
+    if (estatus !== undefined) {
+      dataToCreate.estatus = estatus;
+    }
 
+    // Relación obligatoria con el usuario
     if (finalReportadoPorId && !isNaN(finalReportadoPorId)) {
       dataToCreate.reportadoPor = {
         connect: { id: finalReportadoPorId }
