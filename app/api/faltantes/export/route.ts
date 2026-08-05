@@ -48,12 +48,11 @@ export async function GET(request: Request) {
     const headers = [
       'ID',
       'Fecha',
-      'Hora',
       'Producto',
       'Marca',
       'Codigo SAE',
       'Codigo Prov',
-      'Proveedor',
+      'Proveedor Sugerido',
       'Cantidad',
       'Motivo',
       'Reportado Por',
@@ -65,13 +64,17 @@ export async function GET(request: Request) {
 
     for (const item of faltantes) {
       const dateObj = new Date(item.fechaReporte);
-      const fechaStr = dateObj.toLocaleDateString('es-MX');
-      const horaStr = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+      const fechaHoraStr = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
       const row = [
         item.id,
-        `"${fechaStr}"`,
-        `"${horaStr}"`,
+        `"${fechaHoraStr}"`,
         `"${(item.producto || '').replace(/"/g, '""')}"`,
         `"${(item.marca || '').replace(/"/g, '""')}"`,
         `"${(item.codigoSae || '').replace(/"/g, '""')}"`,
