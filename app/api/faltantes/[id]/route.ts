@@ -8,6 +8,7 @@ export async function PATCH(
   try {
     const resolvedParams = await Promise.resolve(context.params);
     const id = parseInt(resolvedParams.id);
+    
     const body = await request.json();
     const { estatus, usuarioId, pin } = body;
 
@@ -42,5 +43,24 @@ export async function PATCH(
   } catch (error) {
     console.error('Error al actualizar estatus:', error);
     return NextResponse.json({ error: 'Error al actualizar el estatus.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  try {
+    const resolvedParams = await Promise.resolve(context.params);
+    const id = parseInt(resolvedParams.id);
+
+    await prisma.faltante.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: 'Faltante eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar faltante:', error);
+    return NextResponse.json({ error: 'Error al eliminar el faltante' }, { status: 500 });
   }
 }
