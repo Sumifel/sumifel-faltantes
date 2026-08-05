@@ -511,22 +511,11 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
-          {/* ENCABEZADO PARA IMPRESIÓN / PDF CON FILTROS APLICADOS */}
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
               <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
-            </div>
-            
-            {/* Resumen de Filtros Aplicados */}
-            <div className="mt-4 pt-3 border-t border-gray-300 text-xs text-gray-800 grid grid-cols-2 md:grid-cols-3 gap-2 bg-gray-50 p-3 rounded-lg">
-              <p>🔍 <strong className="text-gray-900">Búsqueda:</strong> {busquedaTexto ? `"${busquedaTexto}"` : 'Ninguna (Todos)'}</p>
-              <p>📌 <strong className="text-gray-900">Estatus:</strong> {filtroEstatus === 'TODOS' ? 'Todos' : filtroEstatus}</p>
-              <p>🏷️ <strong className="text-gray-900">Motivo:</strong> {filtroMotivo === 'TODOS' ? 'Todos' : filtroMotivo.replace('_', ' ')}</p>
-              <p>⚠️ <strong className="text-gray-900">Alerta SAE:</strong> {filtroAlerta === 'TODOS' ? 'Todos' : filtroAlerta === 'SI' ? 'Con Diferencia' : 'Sin Diferencia'}</p>
-              <p>👤 <strong className="text-gray-900">Reportado por:</strong> {filtroUsuario === 'TODOS' ? 'Todos' : (usuarios.find(u => u.id.toString() === filtroUsuario)?.nombre || 'Todos')}</p>
-              <p>📅 <strong className="text-gray-900">Rango de Fechas:</strong> {filtroFechaInicio || filtroFechaFin ? `${filtroFechaInicio || 'Inicio'} al ${filtroFechaFin || 'Actualidad'}` : 'Todas'}</p>
             </div>
           </div>
 
