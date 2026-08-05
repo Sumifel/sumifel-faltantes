@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 
+interface Usuario {
+  id: number;
+  nombre: string;
+  rol: string;
+}
+
 interface Faltante {
   id: number;
   producto: string;
@@ -13,39 +19,48 @@ interface Faltante {
   estatus: 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
   fechaReporte: string;
   reportadoPor: {
+    id: number;
     nombre: string;
   };
 }
 
 export default function Home() {
   const [faltantes, setFaltantes] = useState<Faltante[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  
+  // Campos del formulario
   const [producto, setProducto] = useState('');
   const [codigoSae, setCodigoSae] = useState('');
   const [codigoProv, setCodigoProv] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState<'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA'>('ALTA_DEMANDA');
   const [diferenciaSae, setDiferenciaSae] = useState(false);
+  const [usuarioId, setUsuarioId] = useState('');
+
+  // Filtros y estados visuales
+  const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  const cargarFaltantes = async () => {
+  const cargarDatos = async () => {
     try {
       const res = await fetch('/api/faltantes');
       const data = await res.json();
-      if (Array.isArray(data)) setFaltantes(data);
+      if (data.faltantes) setFaltantes(data.faltantes);
+      if (data.usuarios) setUsuarios(data.usuarios);
     } catch (error) {
-      console.error('Error al cargar faltantes', error);
+      console.error('Error al cargar datos', error);
     }
   };
 
   useEffect(() => {
-    cargarFaltantes();
+    cargarDatos();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!producto || !cantidad) {
-      alert('Por favor escribe el nombre del producto y la cantidad.');
+    if (!producto || !cantidad || !usuarioId) {
+      alert('Por favor complete los campos obligatorios y seleccione quién reporta.');
       return;
     }
 
@@ -63,6 +78,7 @@ export default function Home() {
           cantidadSugerida: parseFloat(cantidad),
           motivo,
           diferenciaSae,
+          usuarioId: parseInt(usuarioId),
         }),
       });
 
@@ -74,7 +90,7 @@ export default function Home() {
         setMotivo('ALTA_DEMANDA');
         setDiferenciaSae(false);
         setMensaje('¡Faltante registrado con éxito!');
-        cargarFaltantes();
+        cargarDatos();
       } else {
         setMensaje('Error al registrar el faltante.');
       }
@@ -85,7 +101,6 @@ export default function Home() {
     }
   };
 
-  // Función para cambiar el estatus en segundo plano (PATCH)
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
     try {
       const res = await fetch(`/api/faltantes/${id}`, {
@@ -95,7 +110,6 @@ export default function Home() {
       });
 
       if (res.ok) {
-        // Actualizamos el estado local para reflejar el cambio de inmediato
         setFaltantes((prev) =>
           prev.map((item) =>
             item.id === id ? { ...item, estatus: nuevoEstatus as any } : item
@@ -109,15 +123,23 @@ export default function Home() {
     }
   };
 
+  // Filtrado de elementos según los botones seleccionados
+  const faltantesFiltrados = faltantes.filter((item) => {
+    if (filtroEstatus === 'TODOS') return true;
+    return item.estatus === filtroEstatus;
+  });
+
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6">
+        {/* Cabecera */}
+        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 print:bg-none print:text-black print:p-2">
           <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
-          <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento</p>
+          <p className="text-blue-100 text-sm mt-1 print:hidden">Gestión avanzada de inventario y abastecimiento</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+        {/* Formulario (Oculto al imprimir PDF) */}
+        <div className="bg-white p-6 rounded-xl shadow-md mb-8 print:hidden">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Reportar Nuevo Faltante</h2>
           
           {mensaje && (
@@ -127,16 +149,35 @@ export default function Home() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
-              <input
-                type="text"
-                value={producto}
-                onChange={(e) => setProducto(e.target.value)}
-                placeholder="Ej. Cable Kobrex calibre 12"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
+                <input
+                  type="text"
+                  value={producto}
+                  onChange={(e) => setProducto(e.target.value)}
+                  placeholder="Ej. Cable Kobrex calibre 12"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reportado por (Usuario) *</label>
+                <select
+                  value={usuarioId}
+                  onChange={(e) => setUsuarioId(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
+                  required
+                >
+                  <option value="">Seleccione quién captura...</option>
+                  {usuarios.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre} ({u.rol})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -214,19 +255,53 @@ export default function Home() {
           </form>
         </div>
 
+        {/* Historial y Filtros */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
             <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
-            <a
-              href="/api/faltantes/export"
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
-            >
-              📥 Descargar Reporte en Excel (CSV)
-            </a>
+            
+            {/* Botones de Exportación / Impresión */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => window.print()}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
+              >
+                🖨️ Generar Reporte PDF
+              </button>
+              <a
+                href="/api/faltantes/export"
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
+              >
+                📥 Descargar Excel (CSV)
+              </a>
+            </div>
+          </div>
+
+          {/* Barra de Filtros por Estatus */}
+          <div className="flex flex-wrap gap-2 mb-6 print:hidden">
+            <span className="text-sm font-medium text-gray-600 self-center mr-2">Filtrar por estatus:</span>
+            {[
+              { label: 'Todos', value: 'TODOS' },
+              { label: '🔴 Pendientes', value: 'PENDIENTE' },
+              { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
+              { label: '🟢 Recibidos', value: 'RECIBIDO' },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setFiltroEstatus(tab.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  filtroEstatus === tab.value
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
           
-          {faltantes.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados por el momento.</p>
+          {faltantesFiltrados.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados con este filtro.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -237,12 +312,13 @@ export default function Home() {
                     <th className="p-3">Códigos (SAE / Prov.)</th>
                     <th className="p-3">Cant.</th>
                     <th className="p-3">Motivo</th>
+                    <th className="p-3">Capturado Por</th>
                     <th className="p-3">Estatus (Control)</th>
                     <th className="p-3">Alerta SAE</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y text-sm text-gray-800">
-                  {faltantes.map((item) => (
+                  {faltantesFiltrados.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="p-3 text-xs text-gray-500">
                         {new Date(item.fechaReporte).toLocaleString()}
@@ -261,12 +337,15 @@ export default function Home() {
                           {item.motivo}
                         </span>
                       </td>
+                      <td className="p-3 text-xs font-medium text-gray-700">
+                        {item.reportadoPor?.nombre || 'General'}
+                      </td>
                       <td className="p-3">
-                        {/* Selector interactivo para cambiar estatus en tiempo real */}
+                        {/* Selector interactivo para cambiar estatus */}
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
+                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none print:border-none print:bg-transparent ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
                             'bg-green-50 text-green-700 border-green-300'
