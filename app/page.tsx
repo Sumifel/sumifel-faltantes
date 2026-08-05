@@ -221,8 +221,8 @@ export default function Home() {
   const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen bg-gray-50 p-4 md:p-8 flex flex-col justify-between">
+      <div className="max-w-7xl mx-auto w-full">
         <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
@@ -385,10 +385,13 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
-          {/* ENCABEZADO EXCLUSIVO PARA IMPRESIÓN / PDF */}
+          {/* ENCABEZADO EXCLUSIVO PARA IMPRESIÓN / PDF (Incluye usuario imprimiendo y filtros) */}
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
-            <p className="text-sm text-gray-600 mt-1">Fecha de emisión: {new Date().toLocaleString()}</p>
+            <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
+              <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
+              <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
+            </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
               <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
               <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
@@ -596,6 +599,11 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Pie de página institucional */}
+      <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
+        JALONEME LABS 2026
+      </footer>
     </main>
   );
 }
