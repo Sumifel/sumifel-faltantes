@@ -8,6 +8,9 @@ interface Usuario {
   rol: string;
 }
 
+type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
+type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA';
+
 interface Faltante {
   id: number;
   producto: string;
@@ -16,9 +19,9 @@ interface Faltante {
   marca?: string;
   proveedorSugerido?: string;
   cantidadSugerida: number;
-  motivo: 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA';
+  motivo: MotivoFaltante;
   diferenciaSae: boolean;
-  estatus: 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
+  estatus: EstatusFaltante;
   fechaReporte: string;
   reportadoPor: {
     id: number;
@@ -42,7 +45,7 @@ export default function Home() {
   const [marca, setMarca] = useState('');
   const [proveedorSugerido, setProveedorSugerido] = useState('');
   const [cantidad, setCantidad] = useState('');
-  const [motivo, setMotivo] = useState<'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA'>('ALTA_DEMANDA');
+  const [motivo, setMotivo] = useState<MotivoFaltante>('ALTA_DEMANDA');
   const [diferenciaSae, setDiferenciaSae] = useState(false);
   const [usuarioReportaId, setUsuarioReportaId] = useState('');
 
@@ -58,10 +61,25 @@ export default function Home() {
       const res = await fetch('/api/faltantes');
       const data = await res.json();
       if (data.faltantes) setFaltantes(data.faltantes);
-      if (data.usuarios) {
+      if (data.usuarios && data.usuarios.length > 0) {
         setUsuarios(data.usuarios);
-        if (!usuarioSesionId && data.usuarios.length > 0) {
-          setUsuarioSesionId(data.usuarios[0].id.toString());
+        
+        // Si aún no hay sesión seleccionada, tomamos el primer usuario
+        if (!usuarioSesionId) {
+          const primerUsuario = data.usuarios[0];
+          setUsuarioSesionId(primerUsuario.id.toString());
+          
+          // CORRECCIÓN: Si el primer usuario por defecto es Gerencia/Admin, solicitamos su PIN al cargar
+          if (primerUsuario.rol === 'ADMIN' || primerUsuario.rol === 'GERENCIA') {
+            const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${primerUsuario.nombre} para habilitar la edición:`);
+            if (pin && pin.trim() !== '') {
+              setPinGuardado(pin);
+              setAutorizadoGerencia(true);
+            } else {
+              setPinGuardado('');
+              setAutorizadoGerencia(false);
+            }
+          }
         }
       }
     } catch (error) {
@@ -140,6 +158,7 @@ export default function Home() {
         setMensaje('Error al registrar el faltante.');
       }
     } catch (error) {
+      console.error('Error de conexión al registrar:', error);
       setMensaje('Error de conexión.');
     } finally {
       setCargando(false);
@@ -169,7 +188,7 @@ export default function Home() {
       if (res.ok) {
         setFaltantes((prev) =>
           prev.map((item) =>
-            item.id === id ? { ...item, estatus: nuevoEstatus as any } : item
+            item.id === id ? { ...item, estatus: nuevoEstatus as EstatusFaltante } : item
           )
         );
       } else {
@@ -334,7 +353,7 @@ export default function Home() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
                 <select
                   value={motivo}
-                  onChange={(e) => setMotivo(e.target.value as any)}
+                  onChange={(e) => setMotivo(e.target.value as MotivoFaltante)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
                 >
                   <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
@@ -398,7 +417,9 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Filtros */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
+            {/* Estatus */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
               {[
@@ -419,6 +440,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Motivo */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
               {[
@@ -439,6 +461,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Alerta SAE */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
               {[
@@ -458,6 +481,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Reportado por */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
               <button

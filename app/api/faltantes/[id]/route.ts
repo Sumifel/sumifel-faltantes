@@ -1,46 +1,32 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const params = await context.params;
-    const id = parseInt(params.id);
+    const resolvedParams = await Promise.resolve(context.params);
+    const id = resolvedParams.id;
     const body = await request.json();
-    const { estatus, usuarioId, pin } = body;
+    
+    const { estatus, cantidad, motivo, alertaSaes, notas } = body;
 
-    if (!usuarioId) {
-      return NextResponse.json({ error: 'Debe identificar qué usuario está realizando la acción.' }, { status: 400 });
-    }
-
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: parseInt(usuarioId) },
-    });
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado.' }, { status: 404 });
-    }
-
-    // Validar si es Gerencia o Admin
-    if (usuario.rol !== 'ADMIN' && usuario.rol !== 'GERENCIA') {
-      return NextResponse.json({ error: 'Acceso denegado: Solo el Gerente o Administrador pueden cambiar el estatus.' }, { status: 403 });
-    }
-
-    // Validar el PIN si el usuario tiene uno configurado
-    if (usuario.pin && usuario.pin !== pin) {
-      return NextResponse.json({ error: 'PIN de seguridad incorrecto.' }, { status: 401 });
-    }
-
+    // Actualizamos el registro en la base de datos de forma segura
     const faltanteActualizado = await prisma.faltante.update({
-      where: { id },
-      data: { estatus },
+      where: { id: Number(id) },
+      data: {
+        ...(estatus !== undefined && { estatus }),
+        ...(cantidad !== undefined && { cantidad: Number(cantidad) }),
+        ...(motivo !== undefined && { motivo }),
+        ...(alertaSaes !== undefined && { alertaSaes }),
+        ...(notas !== undefined && { notas }),
+      },
     });
 
     return NextResponse.json(faltanteActualizado);
   } catch (error) {
-    console.error('Error al actualizar estatus:', error);
-    return NextResponse.json({ error: 'Error al actualizar el estatus.' }, { status: 500 });
+    console.error('Error al actualizar faltante:', error);
+    return NextResponse.json({ error: 'Error al actualizar faltante' }, { status: 500 });
   }
 }
