@@ -38,6 +38,7 @@ export default function Home() {
   const [pinGuardado, setPinGuardado] = useState<string>('');
   const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
 
+  // Estados para el formulario de captura nueva
   const [producto, setProducto] = useState('');
   const [codigoSae, setCodigoSae] = useState('');
   const [codigoProv, setCodigoProv] = useState('');
@@ -48,6 +49,11 @@ export default function Home() {
   const [diferenciaSae, setDiferenciaSae] = useState(false);
   const [usuarioReportaId, setUsuarioReportaId] = useState('');
 
+  // 🛠️ Estados para la Edición (Versión 4.0)
+  const [editingItem, setEditingItem] = useState<Faltante | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Estados de Filtros
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState<string>('TODOS');
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
@@ -94,6 +100,7 @@ export default function Home() {
 
   const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
   const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
+  const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
 
   const handleCambioUsuario = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nuevoId = e.target.value;
@@ -166,7 +173,7 @@ export default function Home() {
   };
 
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
-    if (!esGerenteOAdmin || !autorizadoGerencia) {
+    if (!puedeModificar) {
       alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN.');
       cargarDatos();
       return;
@@ -204,6 +211,62 @@ export default function Home() {
     } catch (error) {
       console.error('Error al cambiar estatus:', error);
       cargarDatos();
+    }
+  };
+
+  // 🛠️ Funciones para abrir y guardar la edición completa (v4.0)
+  const abrirModalEdicion = (item: Faltante) => {
+    if (!puedeModificar) {
+      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN para editar registros.');
+      return;
+    }
+    setEditingItem({ ...item });
+    setIsEditModalOpen(true);
+  };
+
+  const guardarEdicionCompleta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    try {
+      const res = await fetch(`/api/faltantes/${editingItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          producto: editingItem.producto,
+          codigoSae: editingItem.codigoSae,
+          codigoProv: editingItem.codigoProv,
+          marca: editingItem.marca,
+          proveedorSugerido: editingItem.proveedorSugerido,
+          cantidadSugerida: Number(editingItem.cantidadSugerida),
+          motivo: editingItem.motivo,
+          diferenciaSae: editingItem.diferenciaSae,
+          estatus: editingItem.estatus,
+          usuarioId: parseInt(usuarioSesionId),
+          pin: pinGuardado
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setFaltantes(prev => prev.map(item => item.id === editingItem.id ? editingItem : item));
+        setIsEditModalOpen(false);
+        setEditingItem(null);
+        alert('¡Registro actualizado correctamente con éxito!');
+        cargarDatos();
+      } else {
+        if (res.status === 401) {
+          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
+          setAutorizadoGerencia(false);
+          setPinGuardado('');
+        } else {
+          alert(data.error || 'No se pudo actualizar el registro.');
+        }
+      }
+    } catch (error) {
+      console.error('Error al actualizar registro:', error);
+      alert('Error de conexión al actualizar.');
     }
   };
 
@@ -251,14 +314,12 @@ export default function Home() {
     return pasaBusqueda && pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario && pasaFecha;
   });
 
-  const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
-
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-8 flex flex-col justify-between">
       <div className="max-w-7xl mx-auto w-full">
         <div className="bg-blue-600 text-white p-6 rounded-xl shadow-md mb-6 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">SUMIFEL - Control de Faltantes (v4.0)</h1>
             <p className="text-blue-100 text-sm mt-1">Gestión avanzada de inventario y abastecimiento (SAE 10)</p>
           </div>
 
@@ -278,6 +339,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Sección de Captura (Abierta para todos) */}
         <div className="bg-white p-6 rounded-xl shadow-md mb-8 print:hidden">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Reportar Nuevo Faltante</h2>
           
@@ -417,20 +479,13 @@ export default function Home() {
           </form>
         </div>
 
+        {/* Historial y Listado */}
         <div className="bg-white p-6 rounded-xl shadow-md">
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
               <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div><strong className="text-gray-800">Búsqueda libre:</strong> {busquedaTexto || 'Ninguna'}</div>
-              <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
-              <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
-              <div><strong className="text-gray-800">Alerta SAE:</strong> {filtroAlerta}</div>
-              <div><strong className="text-gray-800">Desde:</strong> {filtroFechaInicio || 'Cualquiera'}</div>
-              <div><strong className="text-gray-800">Hasta:</strong> {filtroFechaFin || 'Cualquiera'}</div>
             </div>
           </div>
 
@@ -439,11 +494,11 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
               {!puedeModificar ? (
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
-                  🔒 Modo Consulta ({usuarioActual?.nombre}). Para modificar estatus, seleccione Gerencia o Admin arriba e ingrese su PIN.
+                  🔒 Modo Consulta ({usuarioActual?.nombre}). Para editar registros o estatus, seleccione Gerencia o Admin arriba e ingrese su PIN.
                 </p>
               ) : (
                 <p className="text-xs text-green-600 font-bold mt-0.5">
-                  🔓 Modo Gerencia / Admin Activo ({usuarioActual?.nombre}) - Modificación de estatus habilitada.
+                  🔓 Modo Gerencia / Admin Activo ({usuarioActual?.nombre}) - Edición general y de estatus habilitada.
                 </p>
               )}
             </div>
@@ -464,6 +519,7 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Filtros de Búsqueda */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
             <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
               <div className="w-full md:w-2/3">
@@ -488,6 +544,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Rangos de fechas, estatus, motivos, etc. */}
             <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Rango de Fecha:</span>
               <div className="flex items-center gap-2">
@@ -508,14 +565,6 @@ export default function Home() {
                   className="p-1.5 bg-white border border-gray-300 rounded-lg text-xs text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
-              {(filtroFechaInicio || filtroFechaFin) && (
-                <button
-                  onClick={() => { setFiltroFechaInicio(''); setFiltroFechaFin(''); }}
-                  className="text-xs text-blue-600 hover:underline font-bold ml-2"
-                >
-                  Limpiar Fechas
-                </button>
-              )}
             </div>
 
             <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
@@ -539,69 +588,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
-              {[
-                { label: 'Todos', value: 'TODOS' },
-                { label: '⚠️ Sin Existencias', value: 'SIN_EXISTENCIAS' },
-                { label: '✨ Nuevos', value: 'NUEVO' },
-                { label: '🚨 Urgentes', value: 'URGENTE' },
-                { label: '🔥 Alta Demanda', value: 'ALTA_DEMANDA' },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setFiltroMotivo(tab.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroMotivo === tab.value ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
-              {[
-                { label: 'Todos', value: 'TODOS' },
-                { label: '⚠️ Con Diferencia', value: 'SI' },
-                { label: '✔️ Sin Diferencia', value: 'NO' },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setFiltroAlerta(tab.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroAlerta === tab.value ? 'bg-yellow-600 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
-              <button
-                onClick={() => setFiltroUsuario('TODOS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  filtroUsuario === 'TODOS' ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                }`}
-              >
-                Todos
-              </button>
-              {usuarios.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setFiltroUsuario(u.id.toString())}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    filtroUsuario === u.id.toString() ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  {u.nombre}
-                </button>
-              ))}
-            </div>
           </div>
           
           {faltantesFiltrados.length === 0 ? (
@@ -617,8 +603,8 @@ export default function Home() {
                     <th className="p-3">Cant.</th>
                     <th className="p-3">Motivo</th>
                     <th className="p-3">Capturado Por</th>
-                    <th className="p-3">Estatus (Control)</th>
-                    <th className="p-3">Alerta SAE</th>
+                    <th className="p-3">Estatus</th>
+                    <th className="p-3 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y text-sm text-gray-800">
@@ -673,12 +659,19 @@ export default function Home() {
                           <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
                         </select>
                       </td>
-                      <td className="p-3">
-                        {item.diferenciaSae ? (
-                          <span className="text-yellow-600 font-bold text-xs" title="Diferencia con SAE 10">⚠️ Sí</span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => abrirModalEdicion(item)}
+                          disabled={!puedeModificar}
+                          title={!puedeModificar ? "Se requiere Modo Gerencia/Admin activo para modificar registros" : "Editar datos del registro"}
+                          className={`px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 mx-auto ${
+                            !puedeModificar 
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                              : 'bg-amber-500 hover:bg-amber-600 text-white shadow'
+                          }`}
+                        >
+                          ✏️ Editar
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -688,6 +681,150 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* 🛠️ MODAL DE EDICIÓN COMPLETA (Versión 4.0) */}
+      {isEditModalOpen && editingItem && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 print:hidden">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-3">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                ✏️ Modificar Registro de Faltante <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Admin/Gerencia</span>
+              </h3>
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={guardarEdicionCompleta} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
+                <input
+                  type="text"
+                  value={editingItem.producto}
+                  onChange={(e) => setEditingItem({ ...editingItem, producto: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código SAE 10</label>
+                  <input
+                    type="text"
+                    value={editingItem.codigoSae || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, codigoSae: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
+                  <input
+                    type="text"
+                    value={editingItem.codigoProv || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, codigoProv: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                  <input
+                    type="text"
+                    value={editingItem.marca || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, marca: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
+                  <input
+                    type="text"
+                    value={editingItem.proveedorSugerido || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, proveedorSugerido: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingItem.cantidadSugerida}
+                    onChange={(e) => setEditingItem({ ...editingItem, cantidadSugerida: Number(e.target.value) })}
+                    className="w-full p-2.5 border rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
+                  <select
+                    value={editingItem.motivo}
+                    onChange={(e) => setEditingItem({ ...editingItem, motivo: e.target.value as MotivoFaltante })}
+                    className="w-full p-2.5 border rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
+                    <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
+                    <option value="URGENTE">🚨 Pedido Urgente</option>
+                    <option value="NUEVO">✨ Producto Nuevo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Estatus</label>
+                  <select
+                    value={editingItem.estatus}
+                    onChange={(e) => setEditingItem({ ...editingItem, estatus: e.target.value as EstatusFaltante })}
+                    className="w-full p-2.5 border rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="PENDIENTE">🔴 PENDIENTE</option>
+                    <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
+                    <option value="RECIBIDO">🟢 RECIBIDO</option>
+                    <option value="DESCARTADO">🟠 DESCARTADO</option>
+                    <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <input
+                  type="checkbox"
+                  id="editDiferencia"
+                  checked={editingItem.diferenciaSae}
+                  onChange={(e) => setEditingItem({ ...editingItem, diferenciaSae: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="editDiferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
+                  ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
         JALONEME LABS 2026 - SUMIFEL
