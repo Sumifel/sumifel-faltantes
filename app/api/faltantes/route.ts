@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const USUARIOS_OBLIGATORIOS = [
-  { nombre: 'Mostrador', rol: 'EMPLEADO' },
   { nombre: 'Gerente', rol: 'GERENCIA' },
   { nombre: 'Administrador', rol: 'ADMIN' },
   { nombre: 'Ventas 02', rol: 'VENTAS' },
@@ -10,7 +9,7 @@ const USUARIOS_OBLIGATORIOS = [
   { nombre: 'Ventas 12', rol: 'VENTAS' },
   { nombre: 'Ventas 16', rol: 'VENTAS' },
   { nombre: 'Almacen', rol: 'ALMACEN' },
-  
+  { nombre: 'Mostrador', rol: 'EMPLEADO' },
 ];
 
 export async function GET() {
@@ -73,7 +72,15 @@ export async function POST(request: Request) {
     const finalCantidadSugerida = Number(cantidadSugerida ?? cantidad) || 1;
     const finalReportadoPorId = Number(reportadoPorId ?? usuarioId);
 
+    // Prisma exige 'producto' como obligatorio en el esquema
+    const finalProducto = producto || descripcion || nombre;
+
+    if (!finalProducto) {
+      return NextResponse.json({ error: 'El nombre o descripción del producto es obligatorio.' }, { status: 400 });
+    }
+
     const dataToCreate: any = {
+      producto: String(finalProducto),
       codigoSae: codigoSae || null,
       codigoProveedor: codigoProveedor || null,
       marca: marca || null,
@@ -84,8 +91,6 @@ export async function POST(request: Request) {
     };
 
     if (descripcion !== undefined) dataToCreate.descripcion = descripcion;
-    else if (nombre !== undefined) dataToCreate.descripcion = nombre;
-    else if (producto !== undefined) dataToCreate.descripcion = producto;
 
     if (finalReportadoPorId && !isNaN(finalReportadoPorId)) {
       dataToCreate.reportadoPor = {
