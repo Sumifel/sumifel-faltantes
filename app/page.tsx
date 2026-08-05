@@ -159,8 +159,17 @@ export default function Home() {
           </form>
         </div>
 
+        {/* Sección del Historial y Botón de Excel */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Historial de Faltantes</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
+            <a
+              href="/api/faltantes/export"
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
+            >
+              📥 Descargar Reporte en Excel (CSV)
+            </a>
+          </div>
           
           {faltantes.length === 0 ? (
             <p className="text-gray-500 text-sm text-center py-4">No hay faltantes registrados por el momento.</p>

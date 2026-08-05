@@ -28,6 +28,10 @@ model Faltante {
 }
 
 enum Rol {
+  Ventas10
+  Ventas02
+  Ventas12
+  Ventas16
   MOSTRADOR
   COMPRAS
   ALMACEN
