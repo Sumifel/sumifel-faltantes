@@ -35,6 +35,7 @@ export default function Home() {
   
   const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
   
+  // Estados para el control de sesión segura por PIN
   const [pinGuardado, setPinGuardado] = useState<string>('');
   const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
 
@@ -217,42 +218,6 @@ export default function Home() {
     return pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
   });
 
-  // Función para exportar respetando filtros activos
-  const exportarExcelFiltrado = () => {
-    if (faltantesFiltrados.length === 0) {
-      alert('No hay datos filtrados para exportar.');
-      return;
-    }
-
-    const headers = ['ID', 'Fecha', 'Producto', 'Marca', 'Codigo SAE', 'Codigo Proveedor', 'Proveedor Sugerido', 'Cantidad', 'Motivo', 'Reportado Por', 'Estatus', 'Diferencia SAE'];
-    
-    const rows = faltantesFiltrados.map(item => [
-      item.id,
-      `"${new Date(item.fechaReporte).toLocaleString()}"`,
-      `"${item.producto.replace(/"/g, '""')}"`,
-      `"${(item.marca || '').replace(/"/g, '""')}"`,
-      `"${(item.codigoSae || '').replace(/"/g, '""')}"`,
-      `"${(item.codigoProv || '').replace(/"/g, '""')}"`,
-      `"${(item.proveedorSugerido || '').replace(/"/g, '""')}"`,
-      item.cantidadSugerida,
-      item.motivo,
-      `"${(item.reportadoPor?.nombre || '').replace(/"/g, '""')}"`,
-      item.estatus,
-      item.diferenciaSae ? 'SI' : 'NO'
-    ]);
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `faltantes_sumifel_filtrado_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
 
   return (
@@ -420,6 +385,7 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
+          {/* ENCABEZADO EXCLUSIVO PARA IMPRESIÓN / PDF (Incluye usuario imprimiendo y filtros) */}
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
@@ -455,16 +421,18 @@ export default function Home() {
               >
                 🖨️ Generar Reporte PDF
               </button>
-              <button
-                onClick={exportarExcelFiltrado}
+              <a
+                href="/api/faltantes/export"
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
               >
-                📥 Descargar Excel Filtrado (CSV)
-              </button>
+                📥 Descargar Excel (CSV)
+              </a>
             </div>
           </div>
 
+          {/* Filtros */}
           <div className="flex flex-col gap-3 mb-6 print:hidden bg-gray-50 p-4 rounded-xl border border-gray-200">
+            {/* Estatus */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Estatus:</span>
               {[
@@ -485,6 +453,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Motivo */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Motivo:</span>
               {[
@@ -506,6 +475,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Alerta SAE */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Alerta SAE:</span>
               {[
@@ -525,6 +495,7 @@ export default function Home() {
               ))}
             </div>
 
+            {/* Reportado por */}
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Reportado Por:</span>
               <button
@@ -629,6 +600,7 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Pie de página institucional */}
       <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
         JALONEME LABS 2026
       </footer>
