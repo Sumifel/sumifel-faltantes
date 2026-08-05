@@ -64,12 +64,10 @@ export default function Home() {
       if (data.usuarios && data.usuarios.length > 0) {
         setUsuarios(data.usuarios);
         
-        // Si aún no hay sesión seleccionada, tomamos el primer usuario
         if (!usuarioSesionId) {
           const primerUsuario = data.usuarios[0];
           setUsuarioSesionId(primerUsuario.id.toString());
           
-          // CORRECCIÓN: Si el primer usuario por defecto es Gerencia/Admin, solicitamos su PIN al cargar
           if (primerUsuario.rol === 'ADMIN' || primerUsuario.rol === 'GERENCIA') {
             const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${primerUsuario.nombre} para habilitar la edición:`);
             if (pin && pin.trim() !== '') {
@@ -94,7 +92,6 @@ export default function Home() {
   const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
   const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
 
-  // Manejar el cambio de usuario superior con autenticación única de PIN
   const handleCambioUsuario = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nuevoId = e.target.value;
     setUsuarioSesionId(nuevoId);
@@ -388,6 +385,18 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
+          {/* ENCABEZADO EXCLUSIVO PARA IMPRESIÓN / PDF */}
+          <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
+            <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
+            <p className="text-sm text-gray-600 mt-1">Fecha de emisión: {new Date().toLocaleString()}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
+              <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
+              <div><strong className="text-gray-800">Alerta SAE:</strong> {filtroAlerta}</div>
+              <div><strong className="text-gray-800">Reportado por:</strong> {filtroUsuario === 'TODOS' ? 'Todos los usuarios' : usuarios.find(u => u.id.toString() === filtroUsuario)?.nombre || filtroUsuario}</div>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
