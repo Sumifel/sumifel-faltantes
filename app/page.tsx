@@ -53,6 +53,8 @@ export default function Home() {
   const [filtroMotivo, setFiltroMotivo] = useState<string>('TODOS');
   const [filtroAlerta, setFiltroAlerta] = useState<string>('TODOS');
   const [filtroUsuario, setFiltroUsuario] = useState<string>('TODOS');
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
   
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -211,6 +213,8 @@ export default function Home() {
     setFiltroMotivo('TODOS');
     setFiltroAlerta('TODOS');
     setFiltroUsuario('TODOS');
+    setFiltroFechaInicio('');
+    setFiltroFechaFin('');
   };
 
   const faltantesFiltrados = faltantes.filter((item) => {
@@ -233,7 +237,18 @@ export default function Home() {
       filtroUsuario === 'TODOS' || 
       item.reportadoPor?.id.toString() === filtroUsuario;
 
-    return pasaBusqueda && pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario;
+    let pasaFecha = true;
+    if (item.fechaReporte) {
+      const fechaItemOnly = item.fechaReporte.split('T')[0];
+      if (filtroFechaInicio && fechaItemOnly < filtroFechaInicio) {
+        pasaFecha = false;
+      }
+      if (filtroFechaFin && fechaItemOnly > filtroFechaFin) {
+        pasaFecha = false;
+      }
+    }
+
+    return pasaBusqueda && pasaEstatus && pasaMotivo && pasaAlerta && pasaUsuario && pasaFecha;
   });
 
   const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
@@ -414,6 +429,8 @@ export default function Home() {
               <div><strong className="text-gray-800">Filtro Estatus:</strong> {filtroEstatus}</div>
               <div><strong className="text-gray-800">Filtro Motivo:</strong> {filtroMotivo}</div>
               <div><strong className="text-gray-800">Alerta SAE:</strong> {filtroAlerta}</div>
+              <div><strong className="text-gray-800">Desde:</strong> {filtroFechaInicio || 'Cualquiera'}</div>
+              <div><strong className="text-gray-800">Hasta:</strong> {filtroFechaFin || 'Cualquiera'}</div>
             </div>
           </div>
 
@@ -439,7 +456,7 @@ export default function Home() {
                 🖨️ Generar Reporte PDF
               </button>
               <a
-                href={`/api/faltantes/export?busqueda=${encodeURIComponent(busquedaTexto)}&estatus=${filtroEstatus}&motivo=${filtroMotivo}&alerta=${filtroAlerta}&usuarioId=${filtroUsuario}`}
+                href={`/api/faltantes/export?busqueda=${encodeURIComponent(busquedaTexto)}&estatus=${filtroEstatus}&motivo=${filtroMotivo}&alerta=${filtroAlerta}&usuarioId=${filtroUsuario}&fechaInicio=${filtroFechaInicio}&fechaFin=${filtroFechaFin}`}
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2 text-sm"
               >
                 📥 Descargar Excel (CSV)
@@ -469,6 +486,36 @@ export default function Home() {
                   🧹 Limpiar Filtros
                 </button>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
+              <span className="text-xs font-bold text-gray-700 uppercase w-32">Rango de Fecha:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-semibold">Desde:</span>
+                <input
+                  type="date"
+                  value={filtroFechaInicio}
+                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                  className="p-1.5 bg-white border border-gray-300 rounded-lg text-xs text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-xs text-gray-500 font-semibold">Hasta:</span>
+                <input
+                  type="date"
+                  value={filtroFechaFin}
+                  onChange={(e) => setFiltroFechaFin(e.target.value)}
+                  className="p-1.5 bg-white border border-gray-300 rounded-lg text-xs text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              {(filtroFechaInicio || filtroFechaFin) && (
+                <button
+                  onClick={() => { setFiltroFechaInicio(''); setFiltroFechaFin(''); }}
+                  className="text-xs text-blue-600 hover:underline font-bold ml-2"
+                >
+                  Limpiar Fechas
+                </button>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
@@ -615,6 +662,7 @@ export default function Home() {
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
                             item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
                             item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
+                            item.estatus === 'DESCONTINUADO' ? 'bg-gray-200 text-gray-800 border-gray-400' :
                             'bg-gray-100 text-gray-700 border-gray-300'
                           }`}
                         >
