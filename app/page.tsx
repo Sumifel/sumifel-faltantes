@@ -37,6 +37,22 @@ export default function FaltantesPage() {
   const [filtroDiferenciaSae, setFiltroDiferenciaSae] = useState<string>('TODOS');
   const [busqueda, setBusqueda] = useState<string>('');
 
+  // Estado para Nuevo Faltante
+  const [showNuevoModal, setShowNuevoModal] = useState(false);
+  const [nuevoForm, setNuevoForm] = useState({
+    producto: '',
+    codigoSae: '',
+    codigoProv: '',
+    marca: '',
+    proveedorSugerido: '',
+    cantidadSugerida: 1,
+    motivo: 'Sin Existencias',
+    diferenciaSae: '',
+    usuarioId: '',
+  });
+  const [errorNuevo, setErrorNuevo] = useState('');
+  const [successNuevo, setSuccessNuevo] = useState('');
+
   // Estado de Edición / Modal
   const [editingItem, setEditingItem] = useState<Faltante | null>(null);
   const [formValues, setFormValues] = useState({
@@ -50,8 +66,8 @@ export default function FaltantesPage() {
     diferenciaSae: '',
     estatus: '',
   });
-  const [usuarioId, setUsuarioId] = useState<string>('');
-  const [pin, setPin] = useState<string>('');
+  const [usuarioIdEdit, setUsuarioIdEdit] = useState<string>('');
+  const [pinEdit, setPinEdit] = useState<string>('');
   const [errorModal, setErrorModal] = useState<string>('');
   const [successModal, setSuccessModal] = useState<string>('');
 
@@ -82,6 +98,51 @@ export default function FaltantesPage() {
     }
   };
 
+  const registrarFaltante = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorNuevo('');
+    setSuccessNuevo('');
+
+    if (!nuevoForm.usuarioId) {
+      setErrorNuevo('Selecciona quién reporta.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/faltantes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...nuevoForm,
+          cantidadSugerida: Number(nuevoForm.cantidadSugerida),
+          usuarioId: Number(nuevoForm.usuarioId),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al registrar faltante');
+
+      setSuccessNuevo('¡Faltante registrado con éxito!');
+      setTimeout(() => {
+        setShowNuevoModal(false);
+        setNuevoForm({
+          producto: '',
+          codigoSae: '',
+          codigoProv: '',
+          marca: '',
+          proveedorSugerido: '',
+          cantidadSugerida: 1,
+          motivo: 'Sin Existencias',
+          diferenciaSae: '',
+          usuarioId: '',
+        });
+        cargarDatos();
+      }, 1000);
+    } catch (err: any) {
+      setErrorNuevo(err.message || 'Error al guardar');
+    }
+  };
+
   const abrirModalEdicion = (item: Faltante) => {
     setEditingItem(item);
     setFormValues({
@@ -95,8 +156,8 @@ export default function FaltantesPage() {
       diferenciaSae: item.diferenciaSae || '',
       estatus: item.estatus || 'PENDIENTE',
     });
-    setUsuarioId('');
-    setPin('');
+    setUsuarioIdEdit('');
+    setPinEdit('');
     setErrorModal('');
     setSuccessModal('');
   };
@@ -106,11 +167,11 @@ export default function FaltantesPage() {
     setErrorModal('');
     setSuccessModal('');
 
-    if (!usuarioId) {
+    if (!usuarioIdEdit) {
       setErrorModal('Selecciona el usuario que autoriza.');
       return;
     }
-    if (!pin) {
+    if (!pinEdit) {
       setErrorModal('Ingresa el PIN de autorización.');
       return;
     }
@@ -121,16 +182,13 @@ export default function FaltantesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formValues,
-          usuarioId: Number(usuarioId),
-          pin,
+          usuarioId: Number(usuarioIdEdit),
+          pin: pinEdit,
         }),
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Error al actualizar el registro');
-      }
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar el registro');
 
       setSuccessModal('¡Registro actualizado correctamente con éxito!');
       setTimeout(() => {
@@ -170,7 +228,7 @@ export default function FaltantesPage() {
             <h1 className="text-3xl font-extrabold text-gray-900">SUMIFEL - Control de Faltantes</h1>
             <p className="text-gray-600 mt-1">Gestión y seguimiento de productos faltantes en sucursal con SAE 10.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <input
               type="text"
               placeholder="Buscar producto, código, marca..."
@@ -179,8 +237,14 @@ export default function FaltantesPage() {
               className="px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 w-64 bg-white text-black"
             />
             <button
+              onClick={() => setShowNuevoModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow transition font-bold text-sm flex items-center gap-1.5"
+            >
+              <span>➕</span> Nuevo Faltante
+            </button>
+            <button
               onClick={cargarDatos}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow transition font-medium"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow transition font-medium text-sm"
             >
               Actualizar
             </button>
@@ -250,6 +314,7 @@ export default function FaltantesPage() {
                     <th className="p-4">Diferencia SAE</th>
                     <th className="p-4">Motivo</th>
                     <th className="p-4">Estatus</th>
+                    <th className="p-4">Reportó</th>
                     <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -293,6 +358,9 @@ export default function FaltantesPage() {
                           {item.estatus}
                         </span>
                       </td>
+                      <td className="p-4 text-xs text-gray-600 font-medium">
+                        {item.reportadoPor?.nombre || 'N/A'}
+                      </td>
                       <td className="p-4 text-center">
                         <button
                           onClick={() => abrirModalEdicion(item)}
@@ -308,6 +376,148 @@ export default function FaltantesPage() {
             </div>
           )}
         </div>
+
+        {/* Modal de Nuevo Faltante */}
+        {showNuevoModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+              <div className="bg-green-700 px-6 py-4 flex justify-between items-center text-white">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <span>➕</span> Registrar Nuevo Faltante
+                </h3>
+                <button
+                  onClick={() => setShowNuevoModal(false)}
+                  className="text-green-200 hover:text-white text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={registrarFaltante} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                {errorNuevo && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">{errorNuevo}</div>
+                )}
+                {successNuevo && (
+                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">{successNuevo}</div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre o Descripción del Producto *</label>
+                  <input
+                    type="text"
+                    required
+                    value={nuevoForm.producto}
+                    onChange={(e) => setNuevoForm({ ...nuevoForm, producto: e.target.value })}
+                    placeholder="Ej. CABLE THW CAL 12 KOBREX"
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Código SAE 10</label>
+                    <input
+                      type="text"
+                      value={nuevoForm.codigoSae}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, codigoSae: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Código Proveedor</label>
+                    <input
+                      type="text"
+                      value={nuevoForm.codigoProv}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, codigoProv: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Marca</label>
+                    <input
+                      type="text"
+                      value={nuevoForm.marca}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, marca: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cantidad Sugerida *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={nuevoForm.cantidadSugerida}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, cantidadSugerida: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Motivo del Faltante</label>
+                    <select
+                      value={nuevoForm.motivo}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, motivo: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                    >
+                      <option value="Sin Existencias">Sin Existencias</option>
+                      <option value="Stock Bajo">Stock Bajo</option>
+                      <option value="Pedido Especial">Pedido Especial</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Reporta (Usuario) *</label>
+                    <select
+                      value={nuevoForm.usuarioId}
+                      onChange={(e) => setNuevoForm({ ...nuevoForm, usuarioId: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-black"
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      {usuarios.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nombre} ({u.rol})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Diferencia SAE</label>
+                  <input
+                    type="text"
+                    value={nuevoForm.diferenciaSae}
+                    onChange={(e) => setNuevoForm({ ...nuevoForm, diferenciaSae: e.target.value })}
+                    placeholder="Ej. ¿Diferencia de inventario? (SAE 10 dice que sí hay)"
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 bg-white text-black"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowNuevoModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 shadow transition"
+                  >
+                    Guardar Faltante
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Edición Protegida con PIN */}
         {editingItem && (
@@ -437,8 +647,8 @@ export default function FaltantesPage() {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Autoriza:</label>
                       <select
-                        value={usuarioId}
-                        onChange={(e) => setUsuarioId(e.target.value)}
+                        value={usuarioIdEdit}
+                        onChange={(e) => setUsuarioIdEdit(e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-black"
                         required
                       >
@@ -455,8 +665,8 @@ export default function FaltantesPage() {
                       <input
                         type="password"
                         placeholder="PIN"
-                        value={pin}
-                        onChange={(e) => setPin(e.target.value)}
+                        value={pinEdit}
+                        onChange={(e) => setPinEdit(e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-black"
                         required
                       />
