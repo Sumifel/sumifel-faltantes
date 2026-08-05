@@ -525,7 +525,7 @@ export default function Home() {
               <p>📌 <strong className="text-gray-900">Estatus:</strong> {filtroEstatus === 'TODOS' ? 'Todos' : filtroEstatus}</p>
               <p>🏷️ <strong className="text-gray-900">Motivo:</strong> {filtroMotivo === 'TODOS' ? 'Todos' : filtroMotivo.replace('_', ' ')}</p>
               <p>⚠️ <strong className="text-gray-900">Alerta SAE:</strong> {filtroAlerta === 'TODOS' ? 'Todos' : filtroAlerta === 'SI' ? 'Con Diferencia' : 'Sin Diferencia'}</p>
-              <p>👤 <strong className="text-gray-900">Capturado por:</strong> {filtroUsuario === 'TODOS' ? 'Todos' : (usuarios.find(u => u.id.toString() === filtroUsuario)?.nombre || 'Todos')}</p>
+              <p>👤 <strong className="text-gray-900">Reportado por:</strong> {filtroUsuario === 'TODOS' ? 'Todos' : (usuarios.find(u => u.id.toString() === filtroUsuario)?.nombre || 'Todos')}</p>
               <p>📅 <strong className="text-gray-900">Rango de Fechas:</strong> {filtroFechaInicio || filtroFechaFin ? `${filtroFechaInicio || 'Inicio'} al ${filtroFechaFin || 'Actualidad'}` : 'Todas'}</p>
             </div>
           </div>
@@ -582,23 +582,6 @@ export default function Home() {
                   🧹 Limpiar Filtros
                 </button>
               </div>
-            </div>
-
-            {/* FILTRO CAPTURADO POR */}
-            <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
-              <span className="text-xs font-bold text-gray-700 uppercase w-32">Capturado Por:</span>
-              <select
-                value={filtroUsuario}
-                onChange={(e) => setFiltroUsuario(e.target.value)}
-                className="p-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-black focus:ring-2 focus:ring-blue-500 focus:outline-none w-full md:w-72"
-              >
-                <option value="TODOS">👥 Todos los usuarios (General)</option>
-                {usuarios.map((u) => (
-                  <option key={u.id} value={u.id.toString()}>
-                    {u.nombre} ({u.rol})
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
