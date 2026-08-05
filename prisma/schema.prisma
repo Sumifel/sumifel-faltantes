@@ -17,6 +17,8 @@ enum Estatus {
   PENDIENTE
   EN_PEDIDO
   RECIBIDO
+  DESCARTADO
+  DESCONTINUADO
 }
 
 model Usuario {

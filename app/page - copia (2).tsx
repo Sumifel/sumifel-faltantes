@@ -8,7 +8,7 @@ interface Usuario {
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO' | 'DESCONTINUADO';
+type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO';
 type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA' | 'SIN_EXISTENCIAS';
 
 interface Faltante {
@@ -478,8 +478,6 @@ export default function Home() {
                 { label: '🔴 Pendientes', value: 'PENDIENTE' },
                 { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
                 { label: '🟢 Recibidos', value: 'RECIBIDO' },
-                { label: '🟠 Descartados', value: 'DESCARTADO' },
-                { label: '❌ Descontinuados', value: 'DESCONTINUADO' },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -613,16 +611,12 @@ export default function Home() {
                           } ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
-                            item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
-                            item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
-                            'bg-gray-100 text-gray-700 border-gray-300'
+                            'bg-green-50 text-green-700 border-green-300'
                           }`}
                         >
                           <option value="PENDIENTE">🔴 PENDIENTE</option>
                           <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
                           <option value="RECIBIDO">🟢 RECIBIDO</option>
-                          <option value="DESCARTADO">🟠 DESCARTADO</option>
-                          <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
                         </select>
                       </td>
                       <td className="p-3">
