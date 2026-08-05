@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // Asegúrate de que esta ruta coincida con tu configuración de Prisma
+import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = Number(params.id);
+    const resolvedParams = await params;
+    const id = Number(resolvedParams.id);
+    
     const body = await request.json();
     const { 
       producto, 
