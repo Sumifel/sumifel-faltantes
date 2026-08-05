@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const faltantes = await prisma.faltante.findMany({
-      orderBy: { id: 'desc' }, // O por fecha de creación si tienes un campo de fecha
+      orderBy: { fechaReporte: 'desc' },
+      include: {
+        reportadoPor: true, // Incluye los datos del usuario que lo reportó
+      },
     })
     return NextResponse.json(faltantes)
   } catch (error) {
@@ -18,29 +21,29 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nombre, codigoSae, cantidad, diferenciaInventario } = body
+    const { producto, codigoSae, cantidadSugerida, diferenciaSae } = body
 
     // 1. Verificar si existe al menos un usuario en la base de datos
     let usuario = await prisma.usuario.findFirst()
 
-    // 2. Si no existe ninguno, creamos uno por defecto automáticamente
+    // 2. Si la tabla de usuarios está vacía, creamos uno por defecto automáticamente
     if (!usuario) {
       usuario = await prisma.usuario.create({
         data: {
           nombre: 'Mostrador General',
-          rol: 'ADMIN' // Ajusta el rol según tu esquema (ej. EMPLEADO o string equivalente)
+          rol: 'MOSTRADOR',
         },
       })
     }
 
-    // 3. Crear el faltante utilizando obligatoriamente el ID del usuario
+    // 3. Crear el registro en la tabla Faltante usando los campos exactos del esquema
     const nuevoFaltante = await prisma.faltante.create({
       data: {
-        nombre,
+        producto,
         codigoSae: codigoSae || null,
-        cantidad: Number(cantidad),
-        diferenciaInventario: Boolean(diferenciaInventario),
-        reportadoPorId: usuario.id, // Campo obligatorio satisfecho de forma automática
+        cantidadSugerida: Number(cantidadSugerida),
+        diferenciaSae: Boolean(diferenciaSae),
+        reportadoPorId: usuario.id,
       },
     })
 
