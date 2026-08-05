@@ -5,46 +5,48 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const faltantes = await prisma.faltante.findMany({
-      include: {
-        reportadoPor: true, // Trae los datos de la vendedora que lo reportó
-      },
-      orderBy: {
-        fechaReporte: 'desc',
-      },
+      orderBy: { id: 'desc' }, // O por fecha de creación si tienes un campo de fecha
     })
     return NextResponse.json(faltantes)
   } catch (error) {
-    return NextResponse.json({ error: 'Error al obtener los faltantes' }, { status: 500 })
+    console.error('Error al obtener faltantes:', error)
+    return NextResponse.json({ error: 'Error al obtener los faltantes.' }, { status: 500 })
   }
 }
 
-// POST: Crear un nuevo faltante (el reporte del mostrador)
+// POST: Registrar un nuevo faltante asegurando un usuario válido
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { producto, codigoSae, cantidadSugerida, diferenciaSae, reportadoPorId } = body
+    const { nombre, codigoSae, cantidad, diferenciaInventario } = body
 
-    // Validación básica
-    if (!producto || cantidadSugerida === undefined || !reportadoPorId) {
-      return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 })
+    // 1. Verificar si existe al menos un usuario en la base de datos
+    let usuario = await prisma.usuario.findFirst()
+
+    // 2. Si no existe ninguno, creamos uno por defecto automáticamente
+    if (!usuario) {
+      usuario = await prisma.usuario.create({
+        data: {
+          nombre: 'Mostrador General',
+          rol: 'ADMIN' // Ajusta el rol según tu esquema (ej. EMPLEADO o string equivalente)
+        },
+      })
     }
 
+    // 3. Crear el faltante utilizando obligatoriamente el ID del usuario
     const nuevoFaltante = await prisma.faltante.create({
       data: {
-        producto,
+        nombre,
         codigoSae: codigoSae || null,
-        cantidadSugerida: parseFloat(cantidadSugerida),
-        diferenciaSae: diferenciaSae || false,
-        reportadoPorId: parseInt(reportadoPorId),
+        cantidad: Number(cantidad),
+        diferenciaInventario: Boolean(diferenciaInventario),
+        reportadoPorId: usuario.id, // Campo obligatorio satisfecho de forma automática
       },
-      include: {
-        reportadoPor: true,
-      }
     })
 
     return NextResponse.json(nuevoFaltante, { status: 201 })
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Error al registrar el faltante' }, { status: 500 })
+    console.error('Error al registrar faltante:', error)
+    return NextResponse.json({ error: 'Error al registrar el faltante.' }, { status: 500 })
   }
 }
