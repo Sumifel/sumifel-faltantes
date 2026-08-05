@@ -1,0 +1,40 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  rol       Rol        @default(MOSTRADOR)
+  faltantes Faltante[]
+}
+
+model Faltante {
+  id                Int      @id @default(autoincrement())
+  producto          String
+  codigoSae         String?
+  codigoProv	    String?
+  cantidadSugerida  Float
+  diferenciaSae     Boolean  @default(false)
+  estatus           Estatus  @default(PENDIENTE)
+  reportadoPorId    Int
+  reportadoPor      Usuario  @relation(fields: [reportadoPorId], references: [id])
+  fechaReporte      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+}
+
+enum Rol {
+  MOSTRADOR
+  COMPRAS
+  ALMACEN
+}
+
+enum Estatus {
+  PENDIENTE
+  EN_PEDIDO
+  RECIBIDO
+}
