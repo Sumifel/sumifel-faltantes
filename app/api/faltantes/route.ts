@@ -100,9 +100,10 @@ export async function POST(request: Request) {
     const motivoCrudo = motivo || 'ALTA_DEMANDA';
     const motivoMapeado = MAPA_MOTIVOS[motivoCrudo] || 'SIN_EXISTENCIAS';
 
-    // Ajuste de fecha y hora exacta a la zona horaria de México
-    const fechaLocalStr = new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" });
-    const fechaMexico = new Date(fechaLocalStr);
+    // Cálculo exacto de la hora local de México (UTC-6) sin errores de formato de cadena
+    const ahora = new Date();
+    const utcMs = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
+    const fechaMexico = new Date(utcMs - (6 * 3600 * 1000)); // Ajuste fijo a UTC-6
 
     const dataToCreate: any = {
       producto: String(finalProducto),
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
       cantidadSugerida: finalCantidadSugerida,
       motivo: motivoMapeado as any,
-      fechaReporte: fechaMexico, // <--- Fecha corregida a la hora local de México
+      fechaReporte: fechaMexico, // <--- Hora exacta de México aplicada
     };
 
     if (diferenciaSae !== undefined) {
