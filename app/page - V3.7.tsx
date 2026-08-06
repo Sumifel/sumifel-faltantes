@@ -506,14 +506,12 @@ export default function Home() {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
-          {/* ENCABEZADO PARA IMPRESIÓN / PDF CON FILTROS Y CONTADORES APLICADOS */}
+          {/* ENCABEZADO PARA IMPRESIÓN / PDF CON FILTROS APLICADOS */}
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
               <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString()}</p>
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
-              <p>📊 <strong className="text-gray-900">Total general de registros:</strong> {faltantes.length}</p>
-              <p>🔍 <strong className="text-gray-900">Registros en este reporte (filtrados):</strong> {faltantesFiltrados.length}</p>
             </div>
             
             <div className="mt-4 pt-3 border-t border-gray-300 text-xs text-gray-800 grid grid-cols-2 md:grid-cols-3 gap-2 bg-gray-50 p-3 rounded-lg">
@@ -568,9 +566,10 @@ export default function Home() {
                 />
               </div>
 
+              {/* CONTADOR MEJORADO: Muestra siempre el Total General y los Filtrados */}
               <div className="w-full md:w-auto flex flex-col md:flex-row items-start md:items-center justify-between md:justify-end gap-3">
                 <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm">
-                  <span>📊 Total de Registros: <strong className="text-gray-900 font-bold">{faltantes.length}</strong></span>
+                  <span>📊 Total general: <strong className="text-gray-900 font-bold">{faltantes.length}</strong></span>
                   <span className="text-gray-300">|</span>
                   <span>🔍 Mostrando: <strong className="text-blue-600 font-bold">{faltantesFiltrados.length}</strong></span>
                 </div>
@@ -777,6 +776,7 @@ export default function Home() {
         </div>
       </div>
 
+      {/* VENTANA EMERGENTE (MODAL) DE EDICIÓN CON PIN INTEGRADO */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
@@ -791,6 +791,7 @@ export default function Home() {
             </div>
 
             <form onSubmit={guardarEdicionModal} className="space-y-4">
+              {/* CAMPO DE PIN INTEGRADO DIRECTAMENTE */}
               <div className="bg-amber-50 p-4 rounded-xl border border-amber-300 shadow-sm">
                 <label className="block text-sm font-bold text-amber-900 mb-1">
                   🔒 PIN de Autorización de Gerencia/Admin ({usuarioActual?.nombre}) *
@@ -804,7 +805,7 @@ export default function Home() {
                   required
                 />
                 <p className="text-xs text-amber-700 mt-1">
-                  💡 Si el PIN es incorrecto, tus modificaciones no se perderán; solo corrígelo aquí e intenta guardar de nuevo.
+                  💡 Si el PIN is incorrecto, tus modificaciones no se perderán; solo corrígelo aquí e intenta guardar de nuevo.
                 </p>
               </div>
 
@@ -925,7 +926,7 @@ export default function Home() {
       )}
 
       <footer className="mt-12 text-center text-xs text-gray-500 py-4 border-t border-gray-200 print:hidden">
-        SUMIFEL - Suministros de Ferretería y Electricidad | Sistema de Faltantes integrado con Aspel SAE 10 | By JALONEME LABS
+        SUMIFEL - Suministros de Ferretería y Electricidad     | Sistema de Faltantes integrado con Aspel SAE 10     |   By JALONEME LABS 2026
       </footer>
     </main>
   );
