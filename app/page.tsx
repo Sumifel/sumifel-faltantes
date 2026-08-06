@@ -728,42 +728,41 @@ export default function Home() {
                           {item.motivo}
                         </span>
                       </td>
-                      <td className="p-3 text-xs font-medium text-gray-700">
-                        {item.reportadoPor?.nombre || 'General'}
+                      <td className="p-3 text-xs">
+                        <span className="font-semibold">{item.reportadoPor?.nombre || 'Desconocido'}</span>
                       </td>
                       <td className="p-3">
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          title="Cambiar estatus (Requerirá PIN si es Gerencia/Admin)"
-                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none cursor-pointer shadow-sm ${
+                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
-                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-800 border-yellow-300' :
                             item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
                             item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
-                            item.estatus === 'DESCONTINUADO' ? 'bg-gray-200 text-gray-800 border-gray-400' :
-                            'bg-gray-100 text-gray-700 border-gray-300'
+                            'bg-gray-100 text-gray-600 border-gray-300'
                           }`}
                         >
-                          <option value="PENDIENTE">🔴 PENDIENTE</option>
-                          <option value="EN_PEDIDO">🟡 EN PEDIDO</option>
-                          <option value="RECIBIDO">🟢 RECIBIDO</option>
-                          <option value="DESCARTADO">🟠 DESCARTADO</option>
-                          <option value="DESCONTINUADO">❌ DESCONTINUADO</option>
+                          <option value="PENDIENTE">🔴 Pendiente</option>
+                          <option value="EN_PEDIDO">🟡 En Pedido</option>
+                          <option value="RECIBIDO">🟢 Recibido</option>
+                          <option value="DESCARTADO">🟠 Descartado</option>
+                          <option value="DESCONTINUADO">❌ Descontinuado</option>
                         </select>
                       </td>
                       <td className="p-3">
                         {item.diferenciaSae ? (
-                          <span className="text-yellow-600 font-bold text-xs" title="Diferencia con SAE 10">⚠️ Sí</span>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-bold">
+                            ⚠️ Con Diferencia
+                          </span>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-xs text-gray-400">Sin diferencia</span>
                         )}
                       </td>
                       <td className="p-3 text-center print:hidden">
                         <button
                           onClick={() => abrirModalEdicion(item)}
-                          title="Editar campos de este registro"
-                          className="px-3 py-1.5 rounded text-xs font-bold transition shadow bg-blue-600 hover:bg-blue-700 text-white"
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow transition"
                         >
                           ✏️ Editar
                         </button>
@@ -779,16 +778,13 @@ export default function Home() {
 
       {/* VENTANA EMERGENTE (MODAL) DE EDICIÓN */}
       {modalAbierto && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 md:p-8 overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-200 mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">✏️ Editar Registro de Faltante</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Modifique los campos necesarios con total claridad.</p>
-              </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center pb-4 border-b mb-4">
+              <h3 className="text-xl font-bold text-gray-800">✏️ Editar Registro de Faltante</h3>
               <button
                 onClick={() => setModalAbierto(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 rounded-lg"
+                className="text-gray-400 hover:text-gray-600 font-bold text-xl"
               >
                 ✕
               </button>
@@ -796,76 +792,79 @@ export default function Home() {
 
             <form onSubmit={guardarEdicionModal} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
                 <input
                   type="text"
                   value={editProducto}
                   onChange={(e) => setEditProducto(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Código en SAE 10</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código en SAE 10</label>
                   <input
                     type="text"
                     value={editCodigoSae}
                     onChange={(e) => setEditCodigoSae(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Código de Proveedor (Libre)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código de Proveedor</label>
                   <input
                     type="text"
                     value={editCodigoProv}
                     onChange={(e) => setEditCodigoProv(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Marca</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
                   <input
                     type="text"
                     value={editMarca}
                     onChange={(e) => setEditMarca(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Proveedor Sugerido</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
                   <input
                     type="text"
                     value={editProveedorSugerido}
                     onChange={(e) => setEditProveedorSugerido(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Cantidad Sugerida *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
                   <input
                     type="number"
                     step="any"
                     value={editCantidadSugerida}
                     onChange={(e) => setEditCantidadSugerida(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
                     required
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Motivo del Faltante</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del Faltante</label>
                   <select
                     value={editMotivo}
                     onChange={(e) => setEditMotivo(e.target.value as MotivoFaltante)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-sm text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
                   >
                     <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
                     <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
@@ -875,7 +874,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 bg-yellow-50 p-4 rounded-xl border border-yellow-200 mt-2">
+              <div className="flex items-center space-x-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                 <input
                   type="checkbox"
                   id="editDiferencia"
@@ -883,24 +882,24 @@ export default function Home() {
                   onChange={(e) => setEditDiferenciaSae(e.target.checked)}
                   className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <label htmlFor="editDiferencia" className="text-xs font-bold text-yellow-900 cursor-pointer">
-                  ⚠️ ¿Diferencia de inventario? (SAE 10 indica que sí hay existencias)
+                <label htmlFor="editDiferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
+                  ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setModalAbierto(false)}
-                  className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm font-bold transition"
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg text-sm transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold shadow-md transition flex items-center gap-2"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm shadow transition"
                 >
-                  💾 Guardar Cambios
+                  Guardar Cambios
                 </button>
               </div>
             </form>
@@ -908,8 +907,8 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="w-full text-center py-6 mt-8 border-t border-gray-200 text-xs font-semibold text-gray-500 print:mt-4">
-        JALONEME LABS 2026 - SUMIFEL
+      <footer className="mt-12 text-center text-xs text-gray-500 py-4 border-t border-gray-200 print:hidden">
+        SUMIFEL - Suministros de Ferretería y Electricidad | Sistema de Faltantes integrado con Aspel SAE 10
       </footer>
     </main>
   );
