@@ -100,11 +100,6 @@ export async function POST(request: Request) {
     const motivoCrudo = motivo || 'ALTA_DEMANDA';
     const motivoMapeado = MAPA_MOTIVOS[motivoCrudo] || 'SIN_EXISTENCIAS';
 
-    // Cálculo exacto de la hora local de México (UTC-6) sin errores de formato de cadena
-    const ahora = new Date();
-    const utcMs = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
-    const fechaMexico = new Date(utcMs - (6 * 3600 * 1000)); // Ajuste fijo a UTC-6
-
     const dataToCreate: any = {
       producto: String(finalProducto),
       codigoSae: codigoSae || null,
@@ -113,7 +108,7 @@ export async function POST(request: Request) {
       proveedorSugerido: proveedorSugerido ? String(proveedorSugerido) : null,
       cantidadSugerida: finalCantidadSugerida,
       motivo: motivoMapeado as any,
-      fechaReporte: fechaMexico, // <--- Hora exacta de México aplicada
+      fechaReporte: new Date(), // <--- Registro estándar que el navegador convierte automáticamente a la hora local correcta
     };
 
     if (diferenciaSae !== undefined) {
