@@ -104,11 +104,6 @@ export default function Home() {
 
   useEffect(() => {
     cargarDatos();
-    // Actualizar automáticamente cada 10 segundos para ver los registros de las vendedoras en tiempo real
-    const intervalo = setInterval(() => {
-      cargarDatos();
-    }, 10000);
-    return () => clearInterval(intervalo);
   }, []);
 
   const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
