@@ -73,7 +73,8 @@ export default function Home() {
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  const cargarDatos = async () => {
+  // Carga inicial completa (Usuarios y Faltantes)
+  const cargarDatosIniciales = async () => {
     try {
       const res = await fetch('/api/faltantes');
       const data = await res.json();
@@ -84,29 +85,29 @@ export default function Home() {
         if (!usuarioSesionId) {
           const primerUsuario = data.usuarios[0];
           setUsuarioSesionId(primerUsuario.id.toString());
-          
-          if (primerUsuario.rol === 'ADMIN' || primerUsuario.rol === 'GERENCIA') {
-            const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${primerUsuario.nombre} para habilitar la edición:`);
-            if (pin && pin.trim() !== '') {
-              setPinGuardado(pin);
-              setAutorizadoGerencia(true);
-            } else {
-              setPinGuardado('');
-              setAutorizadoGerencia(false);
-            }
-          }
         }
       }
     } catch (error) {
-      console.error('Error al cargar datos', error);
+      console.error('Error al cargar datos iniciales', error);
+    }
+  };
+
+  // Actualización silenciosa solo para los faltantes (usada por el intervalo de 10 segundos)
+  const actualizarFaltantesSilencioso = async () => {
+    try {
+      const res = await fetch('/api/faltantes');
+      const data = await res.json();
+      if (data.faltantes) setFaltantes(data.faltantes);
+    } catch (error) {
+      console.error('Error al actualizar faltantes en segundo plano', error);
     }
   };
 
   useEffect(() => {
-    cargarDatos();
-    // Actualizar automáticamente cada 10 segundos para ver los registros de las vendedoras en tiempo real
+    cargarDatosIniciales();
+    // Actualizar automáticamente solo la lista de faltantes cada 10 segundos sin pedir contraseñas
     const intervalo = setInterval(() => {
-      cargarDatos();
+      actualizarFaltantesSilencioso();
     }, 10000);
     return () => clearInterval(intervalo);
   }, []);
@@ -174,7 +175,7 @@ export default function Home() {
         setMotivo('SIN_EXISTENCIAS');
         setDiferenciaSae(false);
         setMensaje('¡Faltante registrado con éxito!');
-        cargarDatos();
+        actualizarFaltantesSilencioso();
       } else {
         setMensaje('Error al registrar el faltante.');
       }
@@ -189,7 +190,7 @@ export default function Home() {
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
     if (!puedeModificar) {
       alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN.');
-      cargarDatos();
+      actualizarFaltantesSilencioso();
       return;
     }
 
@@ -220,11 +221,11 @@ export default function Home() {
         } else {
           alert(data.error || 'No se pudo cambiar el estatus.');
         }
-        cargarDatos();
+        actualizarFaltantesSilencioso();
       }
     } catch (error) {
       console.error('Error al cambiar estatus:', error);
-      cargarDatos();
+      actualizarFaltantesSilencioso();
     }
   };
 
