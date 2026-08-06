@@ -34,9 +34,6 @@ export default function Home() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   
   const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
-  
-  // PIN temporal utilizado únicamente al momento de editar o cambiar estatus
-  const [pinTemporal, setPinTemporal] = useState<string>('');
 
   // Estados para nuevo registro
   const [producto, setProducto] = useState('');
@@ -49,7 +46,7 @@ export default function Home() {
   const [diferenciaSae, setDiferenciaSae] = useState(false);
   const [usuarioReportaId, setUsuarioReportaId] = useState('');
 
-  // Estados para la ventana emergente (Modal) de Edición
+  // Estados para la ventana emergente (Modal) de Edición y su PIN integrado
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [editProducto, setEditProducto] = useState('');
@@ -60,6 +57,7 @@ export default function Home() {
   const [editCantidadSugerida, setEditCantidadSugerida] = useState('');
   const [editMotivo, setEditMotivo] = useState<MotivoFaltante>('SIN_EXISTENCIAS');
   const [editDiferenciaSae, setEditDiferenciaSae] = useState(false);
+  const [editPin, setEditPin] = useState('');
 
   // Filtros
   const [busquedaTexto, setBusquedaTexto] = useState('');
@@ -221,13 +219,7 @@ export default function Home() {
       return;
     }
 
-    const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${usuarioActual?.nombre} para editar este registro:`);
-    if (!pin || pin.trim() === '') {
-      alert('Acción cancelada. Se requiere el PIN.');
-      return;
-    }
-
-    setPinTemporal(pin);
+    // Se abre inmediatamente sin bloqueos previos de prompt
     setEditandoId(item.id);
     setEditProducto(item.producto);
     setEditCodigoSae(item.codigoSae || '');
@@ -237,6 +229,7 @@ export default function Home() {
     setEditCantidadSugerida(item.cantidadSugerida.toString());
     setEditMotivo(item.motivo);
     setEditDiferenciaSae(item.diferenciaSae);
+    setEditPin(''); // Limpio para que lo escriba dentro del modal
     setModalAbierto(true);
   };
 
@@ -244,6 +237,10 @@ export default function Home() {
     e.preventDefault();
     if (!editandoId || !editProducto || !editCantidadSugerida) {
       alert('El producto y la cantidad sugerida son obligatorios.');
+      return;
+    }
+    if (!editPin || editPin.trim() === '') {
+      alert('🔒 Por favor ingrese su PIN de seguridad dentro del formulario para autorizar los cambios.');
       return;
     }
 
@@ -261,7 +258,7 @@ export default function Home() {
           motivo: editMotivo,
           diferenciaSae: editDiferenciaSae,
           usuarioId: parseInt(usuarioSesionId),
-          pin: pinTemporal
+          pin: editPin
         }),
       });
 
@@ -287,10 +284,10 @@ export default function Home() {
         );
         setModalAbierto(false);
         setEditandoId(null);
-        setPinTemporal('');
+        setEditPin('');
       } else {
         if (res.status === 401) {
-          alert('❌ PIN de seguridad incorrecto.');
+          alert('❌ PIN de seguridad incorrecto. Verifíquelo e intente de nuevo (sus modificaciones siguen intactas).');
         } else {
           alert(data.error || 'No se pudo actualizar el registro.');
         }
@@ -776,7 +773,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* VENTANA EMERGENTE (MODAL) DE EDICIÓN */}
+      {/* VENTANA EMERGENTE (MODAL) DE EDICIÓN CON PIN INTEGRADO */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
@@ -791,6 +788,24 @@ export default function Home() {
             </div>
 
             <form onSubmit={guardarEdicionModal} className="space-y-4">
+              {/* CAMPO DE PIN INTEGRADO DIRECTAMENTE */}
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-300 shadow-sm">
+                <label className="block text-sm font-bold text-amber-900 mb-1">
+                  🔒 PIN de Autorización de Gerencia/Admin ({usuarioActual?.nombre}) *
+                </label>
+                <input
+                  type="password"
+                  value={editPin}
+                  onChange={(e) => setEditPin(e.target.value)}
+                  placeholder="Ingrese su contraseña PIN"
+                  className="w-full p-3 bg-white border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-black font-semibold"
+                  required
+                />
+                <p className="text-xs text-amber-700 mt-1">
+                  💡 Si el PIN es incorrecto, tus modificaciones no se perderán; solo corrígelo aquí e intenta guardar de nuevo.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre o Descripción del Producto *</label>
                 <input
