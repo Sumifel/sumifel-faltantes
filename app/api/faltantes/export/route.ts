@@ -67,7 +67,6 @@ export async function GET(request: Request) {
     const headers = ['Fecha', 'Producto', 'Marca', 'Codigo SAE', 'Codigo Prov', 'Proveedor Sugerido', 'Cantidad', 'Motivo', 'Diferencia SAE', 'Estatus', 'Reportado Por'];
     
     const rows = faltantes.map((item) => {
-      // CORRECCIÓN DE HORA: Forzar zona horaria de México
       const fechaLocal = new Date(item.fechaReporte).toLocaleString('es-MX', {
         timeZone: 'America/Mexico_City',
         year: 'numeric',
@@ -97,11 +96,19 @@ export async function GET(request: Request) {
     const csvContent = [headers.join(','), ...rows].join('\n');
     const bom = '\uFEFF'; // BOM para que Excel reconozca acentos y caracteres especiales UTF-8
 
+    // CORRECCIÓN DE LA FECHA EN EL NOMBRE DEL ARCHIVO (Usando hora de México en formato YYYY-MM-DD)
+    const fechaActualMexico = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
     return new NextResponse(bom + csvContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="reporte_faltantes_sumifel_${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="reporte_faltantes_sumifel_${fechaActualMexico}.csv"`,
       },
     });
   } catch (error) {
