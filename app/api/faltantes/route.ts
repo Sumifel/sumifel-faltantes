@@ -58,8 +58,10 @@ export async function POST(request: Request) {
         cantidadSugerida: parseFloat(cantidadSugerida),
         motivo: motivo || 'SIN_EXISTENCIAS',
         diferenciaSae: Boolean(diferenciaSae),
-        usuarioId: parseInt(usuarioId),
-        fechaReporte: fechaMexico, // <--- Guardado con la hora local correcta de México
+        reportadoPor: {
+          connect: { id: parseInt(usuarioId) }, // <--- Corrección de sintaxis de relación en Prisma
+        },
+        fechaReporte: fechaMexico,
       },
       include: {
         reportadoPor: true,
