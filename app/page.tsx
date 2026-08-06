@@ -35,8 +35,8 @@ export default function Home() {
   
   const [usuarioSesionId, setUsuarioSesionId] = useState<string>('');
   
-  const [pinGuardado, setPinGuardado] = useState<string>('');
-  const [autorizadoGerencia, setAutorizadoGerencia] = useState<boolean>(false);
+  // PIN temporal utilizado únicamente al momento de editar o cambiar estatus
+  const [pinTemporal, setPinTemporal] = useState<string>('');
 
   // Estados para nuevo registro
   const [producto, setProducto] = useState('');
@@ -92,7 +92,7 @@ export default function Home() {
     }
   };
 
-  // Actualización silenciosa solo para los faltantes (usada por el intervalo de 10 segundos)
+  // Actualización silenciosa solo para los faltantes (intervalo de 10 segundos)
   const actualizarFaltantesSilencioso = async () => {
     try {
       const res = await fetch('/api/faltantes');
@@ -105,7 +105,6 @@ export default function Home() {
 
   useEffect(() => {
     cargarDatosIniciales();
-    // Actualizar automáticamente solo la lista de faltantes cada 10 segundos sin pedir contraseñas
     const intervalo = setInterval(() => {
       actualizarFaltantesSilencioso();
     }, 10000);
@@ -114,28 +113,10 @@ export default function Home() {
 
   const usuarioActual = usuarios.find(u => u.id.toString() === usuarioSesionId);
   const esGerenteOAdmin = usuarioActual?.rol === 'ADMIN' || usuarioActual?.rol === 'GERENCIA';
-  const puedeModificar = esGerenteOAdmin && autorizadoGerencia;
 
   const handleCambioUsuario = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nuevoId = e.target.value;
-    setUsuarioSesionId(nuevoId);
+    setUsuarioSesionId(e.target.value);
     setModalAbierto(false);
-    
-    const user = usuarios.find(u => u.id.toString() === nuevoId);
-    if (user && (user.rol === 'ADMIN' || user.rol === 'GERENCIA')) {
-      const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${user.nombre} para habilitar la edición:`);
-      if (pin !== null && pin.trim() !== '') {
-        setPinGuardado(pin);
-        setAutorizadoGerencia(true);
-      } else {
-        setPinGuardado('');
-        setAutorizadoGerencia(false);
-        alert('Acceso de gerencia no autorizado. Quedará en modo consulta.');
-      }
-    } else {
-      setPinGuardado('');
-      setAutorizadoGerencia(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,8 +169,15 @@ export default function Home() {
   };
 
   const cambiarEstatus = async (id: number, nuevoEstatus: string) => {
-    if (!puedeModificar) {
-      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN.');
+    if (!esGerenteOAdmin) {
+      alert('⛔ Acceso restringido: Solo cuentas de Gerencia o Administrador pueden cambiar el estatus.');
+      actualizarFaltantesSilencioso();
+      return;
+    }
+
+    const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${usuarioActual?.nombre} para autorizar el cambio de estatus:`);
+    if (!pin || pin.trim() === '') {
+      alert('Acción cancelada. Se requiere el PIN.');
       actualizarFaltantesSilencioso();
       return;
     }
@@ -201,7 +189,7 @@ export default function Home() {
         body: JSON.stringify({ 
           estatus: nuevoEstatus,
           usuarioId: parseInt(usuarioSesionId),
-          pin: pinGuardado
+          pin: pin
         }),
       });
 
@@ -215,9 +203,7 @@ export default function Home() {
         );
       } else {
         if (res.status === 401) {
-          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
-          setAutorizadoGerencia(false);
-          setPinGuardado('');
+          alert('❌ PIN de seguridad incorrecto.');
         } else {
           alert(data.error || 'No se pudo cambiar el estatus.');
         }
@@ -230,10 +216,18 @@ export default function Home() {
   };
 
   const abrirModalEdicion = (item: Faltante) => {
-    if (!puedeModificar) {
-      alert('⛔ Acceso restringido: Debe seleccionar una cuenta de Gerencia o Administrador y haber ingresado su PIN para editar registros.');
+    if (!esGerenteOAdmin) {
+      alert('⛔ Acceso restringido: Solo cuentas de Gerencia o Administrador pueden editar registros.');
       return;
     }
+
+    const pin = prompt(`🔒 Ingrese el PIN de seguridad de ${usuarioActual?.nombre} para editar este registro:`);
+    if (!pin || pin.trim() === '') {
+      alert('Acción cancelada. Se requiere el PIN.');
+      return;
+    }
+
+    setPinTemporal(pin);
     setEditandoId(item.id);
     setEditProducto(item.producto);
     setEditCodigoSae(item.codigoSae || '');
@@ -267,7 +261,7 @@ export default function Home() {
           motivo: editMotivo,
           diferenciaSae: editDiferenciaSae,
           usuarioId: parseInt(usuarioSesionId),
-          pin: pinGuardado
+          pin: pinTemporal
         }),
       });
 
@@ -293,11 +287,10 @@ export default function Home() {
         );
         setModalAbierto(false);
         setEditandoId(null);
+        setPinTemporal('');
       } else {
         if (res.status === 401) {
-          alert('PIN de seguridad incorrecto. Se cerrará el modo gerencia.');
-          setAutorizadoGerencia(false);
-          setPinGuardado('');
+          alert('❌ PIN de seguridad incorrecto.');
         } else {
           alert(data.error || 'No se pudo actualizar el registro.');
         }
@@ -362,7 +355,7 @@ export default function Home() {
           </div>
 
           <div className="bg-blue-700 p-3 rounded-lg border border-blue-500 w-full md:w-auto">
-            <label className="block text-xs font-semibold text-blue-200 mb-1">👤 ¿Quién está usando el sistema ahora?</label>
+            <label className="block text-xs font-semibold text-blue-200 mb-1">👤 Usuario Activo en Sesión</label>
             <select
               value={usuarioSesionId}
               onChange={handleCambioUsuario}
@@ -525,7 +518,6 @@ export default function Home() {
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
             </div>
             
-            {/* Resumen de Filtros Aplicados */}
             <div className="mt-4 pt-3 border-t border-gray-300 text-xs text-gray-800 grid grid-cols-2 md:grid-cols-3 gap-2 bg-gray-50 p-3 rounded-lg">
               <p>🔍 <strong className="text-gray-900">Búsqueda:</strong> {busquedaTexto ? `"${busquedaTexto}"` : 'Ninguna (Todos)'}</p>
               <p>📌 <strong className="text-gray-900">Estatus:</strong> {filtroEstatus === 'TODOS' ? 'Todos' : filtroEstatus}</p>
@@ -539,13 +531,13 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Historial de Faltantes</h2>
-              {!puedeModificar ? (
+              {!esGerenteOAdmin ? (
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
-                  🔒 Modo Consulta ({usuarioActual?.nombre}). Para editar o cambiar estatus, seleccione Gerencia o Admin arriba e ingrese su PIN.
+                  🔒 Usuario actual ({usuarioActual?.nombre}): Modo Consulta. Cambiar estatus o editar requerirá PIN de Gerencia/Admin.
                 </p>
               ) : (
                 <p className="text-xs text-green-600 font-bold mt-0.5">
-                  🔓 Modo Gerencia / Admin Activo ({usuarioActual?.nombre}) - Edición y estatus habilitados.
+                  🔓 Usuario actual ({usuarioActual?.nombre}) con perfil de Gerencia/Admin habilitado.
                 </p>
               )}
             </div>
@@ -590,7 +582,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* FILTRO CAPTURADO POR */}
             <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-200">
               <span className="text-xs font-bold text-gray-700 uppercase w-32">Capturado Por:</span>
               <select
@@ -744,11 +735,8 @@ export default function Home() {
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
-                          disabled={!puedeModificar}
-                          title={!puedeModificar ? "Debe seleccionar Gerencia/Admin arriba e ingresar el PIN" : "Cambiar estatus"}
-                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none ${
-                            !puedeModificar ? 'opacity-75 cursor-not-allowed bg-gray-100' : 'cursor-pointer shadow-sm'
-                          } ${
+                          title="Cambiar estatus (Requerirá PIN si es Gerencia/Admin)"
+                          className={`p-1.5 rounded text-xs font-bold border focus:outline-none cursor-pointer shadow-sm ${
                             item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
                             item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
                             item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
@@ -774,13 +762,8 @@ export default function Home() {
                       <td className="p-3 text-center print:hidden">
                         <button
                           onClick={() => abrirModalEdicion(item)}
-                          disabled={!puedeModificar}
-                          title={!puedeModificar ? "Requiere Gerencia/Admin y PIN para editar" : "Editar campos de este registro"}
-                          className={`px-3 py-1.5 rounded text-xs font-bold transition shadow ${
-                            !puedeModificar
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white'
-                          }`}
+                          title="Editar campos de este registro"
+                          className="px-3 py-1.5 rounded text-xs font-bold transition shadow bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           ✏️ Editar
                         </button>
