@@ -16,7 +16,6 @@ enum Motivo {
 enum Estatus {
   PENDIENTE
   EN_PEDIDO
-  EN_REVISION
   RECIBIDO
   DESCARTADO
   DESCONTINUADO

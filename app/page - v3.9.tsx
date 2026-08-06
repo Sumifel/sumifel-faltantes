@@ -8,7 +8,7 @@ interface Usuario {
   rol: string;
 }
 
-type EstatusFaltante = 'PENDIENTE' | 'EN_REVISION' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO' | 'DESCONTINUADO';
+type EstatusFaltante = 'PENDIENTE' | 'EN_PEDIDO' | 'RECIBIDO' | 'DESCARTADO' | 'DESCONTINUADO';
 type MotivoFaltante = 'NUEVO' | 'URGENTE' | 'ALTA_DEMANDA' | 'SIN_EXISTENCIAS';
 
 interface Faltante {
@@ -510,6 +510,7 @@ export default function Home() {
           <div className="hidden print:block mb-6 border-b-2 border-blue-600 pb-4">
             <h1 className="text-2xl font-bold text-gray-900">SUMIFEL - Reporte de Control de Faltantes</h1>
             <div className="mt-2 text-sm text-gray-700 grid grid-cols-2 gap-2">
+              {/* HORA CORREGIDA EN FECHA DE EMISIÓN */}
               <p>📅 <strong className="text-gray-900">Fecha de emisión:</strong> {new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}</p>
               <p>👤 <strong className="text-gray-900">Impreso por:</strong> {usuarioActual ? `${usuarioActual.nombre} (${usuarioActual.rol})` : 'Sistema'}</p>
               <p>📊 <strong className="text-gray-900">Total general de registros:</strong> {faltantes.length}</p>
@@ -626,7 +627,6 @@ export default function Home() {
               {[
                 { label: 'Todos', value: 'TODOS' },
                 { label: '🔴 Pendientes', value: 'PENDIENTE' },
-                { label: '🔍 En Revisión', value: 'EN_REVISION' },
                 { label: '🟡 En Pedido', value: 'EN_PEDIDO' },
                 { label: '🟢 Recibidos', value: 'RECIBIDO' },
                 { label: '🟠 Descartados', value: 'DESCARTADO' },
@@ -706,6 +706,7 @@ export default function Home() {
                 <tbody className="divide-y text-sm text-gray-800">
                   {faltantesFiltrados.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
+                      {/* HORA CORREGIDA EN EL REPORTE DE CADA FALTANTE */}
                       <td className="p-3 text-xs text-gray-500">
                         {new Date(item.fechaReporte).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
                       </td>
@@ -718,9 +719,11 @@ export default function Home() {
                         <div>Prov: <span className="font-semibold">{item.codigoProv || 'N/A'}</span></div>
                         {item.proveedorSugerido && <div className="text-purple-700 font-semibold mt-0.5">Sug: {item.proveedorSugerido}</div>}
                       </td>
-                      <td className="p-3 font-bold">{item.cantidadSugerida}</td>
+                      <td className="p-3 font-bold">
+                        {item.cantidadSugerida}
+                      </td>
                       <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           item.motivo === 'SIN_EXISTENCIAS' ? 'bg-red-100 text-red-800' :
                           item.motivo === 'ALTA_DEMANDA' ? 'bg-orange-100 text-orange-800' :
                           item.motivo === 'URGENTE' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
@@ -728,24 +731,22 @@ export default function Home() {
                           {item.motivo.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="p-3 text-xs">
-                        <div className="font-semibold text-gray-900">{item.reportadoPor?.nombre || 'N/A'}</div>
+                      <td className="p-3 text-xs font-medium text-gray-700">
+                        {item.reportadoPor?.nombre || 'N/A'}
                       </td>
                       <td className="p-3">
                         <select
                           value={item.estatus}
                           onChange={(e) => cambiarEstatus(item.id, e.target.value)}
                           className={`p-1.5 rounded-lg text-xs font-bold border focus:outline-none ${
-                            item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-200' :
-                            item.estatus === 'EN_REVISION' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-200' :
-                            item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                            item.estatus === 'PENDIENTE' ? 'bg-red-50 text-red-700 border-red-300' :
+                            item.estatus === 'EN_PEDIDO' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                            item.estatus === 'RECIBIDO' ? 'bg-green-50 text-green-700 border-green-300' :
+                            item.estatus === 'DESCARTADO' ? 'bg-orange-50 text-orange-700 border-orange-300' :
                             'bg-gray-100 text-gray-700 border-gray-300'
                           }`}
                         >
                           <option value="PENDIENTE">🔴 Pendiente</option>
-                          <option value="EN_REVISION">🔍 En Revisión</option>
                           <option value="EN_PEDIDO">🟡 En Pedido</option>
                           <option value="RECIBIDO">🟢 Recibido</option>
                           <option value="DESCARTADO">🟠 Descartado</option>
@@ -754,15 +755,17 @@ export default function Home() {
                       </td>
                       <td className="p-3 text-center">
                         {item.diferenciaSae ? (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-bold text-xs">Sí</span>
+                          <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded border border-yellow-300">
+                            ⚠️ Sí
+                          </span>
                         ) : (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">No</span>
+                          <span className="text-gray-400 text-xs">No</span>
                         )}
                       </td>
                       <td className="p-3 text-center print:hidden">
                         <button
                           onClick={() => abrirModalEdicion(item)}
-                          className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-semibold transition"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 p-2 rounded-lg text-xs font-bold transition border border-blue-200"
                           title="Editar registro"
                         >
                           ✏️ Editar
@@ -775,133 +778,148 @@ export default function Home() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Modal de Edición */}
-      {modalAbierto && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Faltante #{editandoId}</h3>
-            <form onSubmit={guardarEdicionModal} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
-                <input
-                  type="text"
-                  value={editProducto}
-                  onChange={(e) => setEditProducto(e.target.value)}
-                  className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        {/* MODAL DE EDICIÓN CON PIN INTEGRADO */}
+        {modalAbierto && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 relative">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Editar Faltante (Requiere PIN de Gerencia/Admin)</h3>
+              
+              <form onSubmit={guardarEdicionModal} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código SAE 10</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
                   <input
                     type="text"
-                    value={editCodigoSae}
-                    onChange={(e) => setEditCodigoSae(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
-                  <input
-                    type="text"
-                    value={editCodigoProv}
-                    onChange={(e) => setEditCodigoProv(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-                  <input
-                    type="text"
-                    value={editMarca}
-                    onChange={(e) => setEditMarca(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
-                  <input
-                    type="text"
-                    value={editProveedorSugerido}
-                    onChange={(e) => setEditProveedorSugerido(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editCantidadSugerida}
-                    onChange={(e) => setEditCantidadSugerida(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm focus:outline-none"
+                    value={editProducto}
+                    onChange={(e) => setEditProducto(e.target.value)}
+                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                  <select
-                    value={editMotivo}
-                    onChange={(e) => setEditMotivo(e.target.value as MotivoFaltante)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg text-black text-sm bg-white focus:outline-none"
-                  >
-                    <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
-                    <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
-                    <option value="URGENTE">🚨 Pedido Urgente</option>
-                    <option value="NUEVO">✨ Producto Nuevo</option>
-                  </select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Código SAE 10</label>
+                    <input
+                      type="text"
+                      value={editCodigoSae}
+                      onChange={(e) => setEditCodigoSae(e.target.value)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
+                    <input
+                      type="text"
+                      value={editCodigoProv}
+                      onChange={(e) => setEditCodigoProv(e.target.value)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="editDiferencia"
-                  checked={editDiferenciaSae}
-                  onChange={(e) => setEditDiferenciaSae(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <label htmlFor="editDiferencia" className="text-xs font-medium text-gray-700">
-                  ⚠️ ¿Diferencia de inventario en SAE 10?
-                </label>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <label className="block text-xs font-bold text-yellow-900 mb-1">
-                  🔒 Ingrese su PIN de seguridad ({usuarioActual?.nombre}) para confirmar:
-                </label>
-                <input
-                  type="password"
-                  value={editPin}
-                  onChange={(e) => setEditPin(e.target.value)}
-                  placeholder="PIN de autorización"
-                  className="w-full p-2 bg-white border border-yellow-300 rounded text-black text-sm focus:outline-none"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setModalAbierto(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                    <input
+                      type="text"
+                      value={editMarca}
+                      onChange={(e) => setEditMarca(e.target.value)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor Sugerido</label>
+                    <input
+                      type="text"
+                      value={editProveedorSugerido}
+                      onChange={(e) => setEditProveedorSugerido(e.target.value)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Sugerida *</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editCantidadSugerida}
+                      onChange={(e) => setEditCantidadSugerida(e.target.value)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+                    <select
+                      value={editMotivo}
+                      onChange={(e) => setEditMotivo(e.target.value as MotivoFaltante)}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                      <option value="SIN_EXISTENCIAS">⚠️ Sin Existencias</option>
+                      <option value="ALTA_DEMANDA">🔥 Alta Demanda</option>
+                      <option value="URGENTE">🚨 Urgente</option>
+                      <option value="NUEVO">✨ Nuevo</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                  <input
+                    type="checkbox"
+                    id="editDiferencia"
+                    checked={editDiferenciaSae}
+                    onChange={(e) => setEditDiferenciaSae(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="editDiferencia" className="text-xs font-medium text-yellow-900 cursor-pointer">
+                    ⚠️ ¿Diferencia de inventario? (SAE 10 dice que sí hay)
+                  </label>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
+                  <label className="block text-sm font-bold text-blue-900 mb-1">
+                    🔒 PIN de Seguridad de {usuarioActual?.nombre} *
+                  </label>
+                  <input
+                    type="password"
+                    value={editPin}
+                    onChange={(e) => setEditPin(e.target.value)}
+                    placeholder="Ingrese su PIN para autorizar"
+                    className="w-full p-2.5 border border-blue-300 rounded-lg text-black bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    required
+                  />
+                  <p className="text-xs text-blue-700 mt-1">
+                    Requerido para registrar los cambios en el sistema.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setModalAbierto(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg text-sm transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition shadow"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <footer className="mt-12 text-center text-xs text-gray-500 print:hidden">
+        SUMIFEL - Sistema de Control de Faltantes v10.0 | Operando en Atitalaquia, Hidalgo
+      </footer>
     </main>
   );
 }
