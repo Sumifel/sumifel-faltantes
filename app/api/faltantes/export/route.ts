@@ -108,7 +108,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="reporte_faltantes_sumifel_${fechaActualMexico}.csv"`,
+        'Content-Disposition': `attachment; filename="Reporte de faltantes SUMIFEL_${fechaActualMexico}.csv"`,
       },
     });
   } catch (error) {
