@@ -219,6 +219,7 @@ export default function Home() {
       return;
     }
 
+    // Se abre inmediatamente sin bloqueos previos de prompt
     setEditandoId(item.id);
     setEditProducto(item.producto);
     setEditCodigoSae(item.codigoSae || '');
@@ -228,7 +229,7 @@ export default function Home() {
     setEditCantidadSugerida(item.cantidadSugerida.toString());
     setEditMotivo(item.motivo);
     setEditDiferenciaSae(item.diferenciaSae);
-    setEditPin('');
+    setEditPin(''); // Limpio para que lo escriba dentro del modal
     setModalAbierto(true);
   };
 
@@ -565,14 +566,10 @@ export default function Home() {
                   className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
-
-              {/* CONTADOR MEJORADO: Muestra siempre el Total General y los Filtrados */}
-              <div className="w-full md:w-auto flex flex-col md:flex-row items-start md:items-center justify-between md:justify-end gap-3">
-                <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm">
-                  <span>📊 Total general: <strong className="text-gray-900 font-bold">{faltantes.length}</strong></span>
-                  <span className="text-gray-300">|</span>
-                  <span>🔍 Mostrando: <strong className="text-blue-600 font-bold">{faltantesFiltrados.length}</strong></span>
-                </div>
+              <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3">
+                <span className="text-xs font-semibold text-gray-600">
+                  Mostrando <strong className="text-blue-600">{faltantesFiltrados.length}</strong> de {faltantes.length} registros
+                </span>
                 <button
                   onClick={limpiarFiltros}
                   className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition"
@@ -805,7 +802,7 @@ export default function Home() {
                   required
                 />
                 <p className="text-xs text-amber-700 mt-1">
-                  💡 Si el PIN is incorrecto, tus modificaciones no se perderán; solo corrígelo aquí e intenta guardar de nuevo.
+                  💡 Si el PIN es incorrecto, tus modificaciones no se perderán; solo corrígelo aquí e intenta guardar de nuevo.
                 </p>
               </div>
 
@@ -926,7 +923,7 @@ export default function Home() {
       )}
 
       <footer className="mt-12 text-center text-xs text-gray-500 py-4 border-t border-gray-200 print:hidden">
-        SUMIFEL - Suministros de Ferretería y Electricidad     | Sistema de Faltantes integrado con Aspel SAE 10     |   By JALONEME LABS 2026
+        SUMIFEL - Suministros de Ferretería y Electricidad | Sistema de Faltantes integrado con Aspel SAE 10
       </footer>
     </main>
   );
